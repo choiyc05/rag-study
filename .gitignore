@@ -1,0 +1,39 @@
+# ---------- data ----------
+# AI Hub 원본 데이터: 용량이 크고 재배포 제약이 있어 커밋하지 않음
+# (AI Hub에서 직접 내려받아 README의 트리 구조대로 배치)
+data/
+
+# ---------- python / uv ----------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# ---------- env ----------
+.env
+.env.*
+!.env.example
+
+# ---------- 모델 / 인덱스 산출물 ----------
+# 앞의 / 는 "저장소 루트에서만" 이라는 뜻.
+# 이게 없으면 backend/src/models/ 같은 소스 폴더까지 무시된다.
+*.zip
+*.tar.gz
+/models/
+/embeddings/
+
+# ---------- IDE ----------
+.vscode/
+.idea/
+*.swp
+
+# ---------- OS ----------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

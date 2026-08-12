@@ -1,0 +1,30 @@
+services:
+  db:
+    image: pgvector/pgvector:pg18
+    container_name: rag-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ragdb}
+      # 이미지 기본값은 en_US.utf8. C 로케일은 정렬이 바이트 순서라 빠르고 결정적이지만
+      # 한글 가나다순 정렬이 필요하면 이 줄을 지울 것 (initdb 시점에만 적용됨)
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # PG18 이미지는 PGDATA=/var/lib/postgresql/18/docker 이므로
+      # /var/lib/postgresql 전체를 마운트해야 데이터가 보존됨 (아래 설명 참고)
+      - pgdata:/var/lib/postgresql
+      # 최초 1회(볼륨이 비어 있을 때)만 실행됨
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ragdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  pgdata:
+    name: rag-study-pgdata
