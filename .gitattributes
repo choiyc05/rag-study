@@ -1,0 +1,20 @@
+# 저장소 안의 줄바꿈은 LF로 통일 (Windows/Mac 혼용 시 diff가 통째로 바뀌는 것 방지)
+# 바이너리 파일은 text=auto 판정에서 자동으로 제외된다.
+* text=auto eol=lf
+
+# ---------- 명시적 바이너리 ----------
+*.zip   binary
+*.gz    binary
+*.ico   binary
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+
+# ---------- 자동 생성 파일 ----------
+# GitHub PR에서 diff를 기본으로 접어준다 (리뷰 노이즈 감소)
+uv.lock            linguist-generated=true
+package-lock.json  linguist-generated=true
+
+# ---------- 언어 통계 ----------
+# AI Hub 원본 데이터는 저장소 언어 통계에서 제외
+data/**  linguist-vendored
