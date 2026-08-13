@@ -51,5 +51,5 @@ npm run dev
 
 **DB**
 ```bash
-docker run -d --name rag-pg -p 5432:5432 -e POSTGRES_PASSWORD=postgres pgvector/pgvector:pg18
+docker compose up -d
 ```

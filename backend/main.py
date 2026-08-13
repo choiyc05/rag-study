@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.controllers import chat_controller
 from src.core.settings import get_settings
@@ -9,10 +10,17 @@ settings = get_settings()
 
 app = FastAPI(title="강아지 AI 생활 비서")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_headers=["*"],
+    allow_methods=["*"]
+)
+
 # controller(라우터) 등록. 기능이 늘어나면 이 줄만 추가된다.
 app.include_router(chat_controller.router)
 
-
-@app.get("/")
+@app.get("/", tags=["test"])
 def read_root():
     return {"Hello": "World"}
