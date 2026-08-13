@@ -58,8 +58,8 @@ wheel 지원이 안정적인 버전이 3.12.
 
 ```
 backend/
-├── main.py                 # FastAPI 인스턴스 + 라우터 등록만
-├── .env.example            # GEMINI_API_KEY
+├── main.py                 # FastAPI 인스턴스 + CORS + 라우터 자동 등록
+├── .env.example            # GEMINI_API_KEY, CORS_ORIGINS
 ├── .env                    # 직접 생성 필요 (gitignore됨)
 └── src/
     ├── core/settings.py            # pydantic-settings
@@ -71,6 +71,29 @@ backend/
 ```
 
 `__init__.py`는 두지 않는다. Python 3.3+ namespace package로 import가 정상 동작한다.
+
+### 라우터 자동 등록
+
+`main.py`의 `register_routers()`가 `src/controllers` 아래 모듈을 훑어 `router`를 찾아
+`app.include_router()`로 등록한다. 컨트롤러 파일을 추가하는 것만으로 엔드포인트가 붙고
+`main.py`는 고칠 일이 없다.
+
+**자동화하는 것은 '등록'뿐이다.** 경로와 태그는 각 컨트롤러가 소유한다.
+
+```python
+router = APIRouter(prefix="/chat", tags=["chat"])
+```
+
+파일명에서 prefix를 유도하지 않는 이유는, 그렇게 하면 파일 rename이 곧 API 주소 변경이
+되고 `/v1/...` 같은 예외 경로를 줄 수 없기 때문이다. 전체 URL 목록은
+`grep -rn "APIRouter(" src/controllers`로 한 번에 확인할 수 있다.
+
+| 규칙 | 이유 |
+|---|---|
+| prefix/tags는 `APIRouter()`에 쓴다 | 주소의 출처를 컨트롤러 한 곳으로 모은다 |
+| `router`가 없는 모듈은 기동 실패 | 오타로 엔드포인트가 사라져도 서버는 뜨는 사고를 막는다 |
+| 컨트롤러가 아닌 파일은 `_` 로 시작 | 자동 등록 대상에서 제외된다 |
+| 경로가 겹치는 라우트는 같은 파일에 둔다 | 파일 간 등록 순서는 보장되지 않는다 |
 
 ### 계층 구분 기준 — "무엇을 모르는가"
 

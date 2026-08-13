@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     GEMINI_API_KEY: str
     # .env에 CORS_ORIGINS='["http://localhost:3000"]' 형태(JSON)로 넣으면 리스트로 파싱됨
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]  # 개발 편의상 모든 도메인 허용. 배포 시에는 실제 도메인만 허용하도록 수정.
+    CORS_ORIGINS: list[str] = ["http://localhost:3000"]  # 배포 시에는 .env로 실제 도메인 주입.
 
 
 @lru_cache

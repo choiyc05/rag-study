@@ -6,6 +6,10 @@
     3. service 호출 후 결과 반환
 
 계산도, DB 접근도 하지 않는다. 이 파일이 길어지고 있다면 service로 옮길 로직이 섞인 것이다.
+
+URL prefix와 /docs 태그는 아래 APIRouter가 직접 소유한다.
+main.py는 이 파일을 찾아 등록만 할 뿐 경로에 관여하지 않으므로,
+이 API의 주소를 알고 싶으면 여기만 보면 된다.
 """
 
 from typing import Annotated
