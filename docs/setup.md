@@ -132,6 +132,50 @@ service가 HTTP를 모르게 유지하면, 나중에 "AI Hub 데이터 일괄 �
 - `core/` — 앱이 돌아가기 위한 기반 (설정, DB 연결, 보안)
 - `utils/` — 어디서든 쓰는 순수 함수 (텍스트 정제, 청킹 등). 필요해지면 추가
 
+### CORS
+
+프론트(`localhost:3000`)와 백엔드(`localhost:8000`)는 포트가 달라 브라우저 기준
+**서로 다른 오리진**이다. 오리진은 스킴+호스트+포트가 전부 일치해야 같은 것으로 친다.
+`main.py`에서 `CORSMiddleware`로 허용 오리진을 지정한다.
+
+별도 라이브러리 설치는 필요 없다. Starlette 내장이라 `fastapi.middleware.cors`에서
+바로 import한다 (Flask의 `flask-cors` 같은 패키지가 FastAPI에는 불필요).
+
+허용 오리진은 `Settings.CORS_ORIGINS`로 분리해 `.env`에서 주입한다.
+
+```
+CORS_ORIGINS='["http://localhost:3000"]'
+```
+
+**JSON 배열로 써야 한다.** pydantic-settings가 `list[str]` 필드를 JSON으로 파싱하므로
+`CORS_ORIGINS=http://localhost:3000`처럼 쓰면 기동 시점에 파싱 에러로 죽는다.
+겉따옴표는 dotenv가 벗겨준다.
+
+#### 걸리기 쉬운 지점
+
+- **`allow_methods`를 빠뜨리면 안 된다.** Starlette 기본값이 `("GET",)`이라
+  `POST /chat`의 preflight가 `400 Disallowed CORS method`로 막힌다.
+  `Content-Type: application/json`은 simple request가 아니라 preflight가 항상 뜬다.
+- `127.0.0.1:3000`은 `localhost:3000`과 **다른 오리진**이다. 끝에 `/`를 붙여도 매칭 실패.
+- `allow_credentials=True`와 `allow_origins=["*"]`는 함께 쓰지 않는다.
+  기본값을 `["*"]`로 두면 .env를 빠뜨렸을 때 조용히 전체 개방되므로,
+  기본값은 로컬 오리진으로 좁혀 두고 배포 도메인은 `.env`로 주입한다.
+- 브라우저 콘솔의 "CORS 에러"가 항상 CORS 문제인 것은 아니다. 미들웨어를 타기 전에
+  죽는 예외에는 CORS 헤더가 안 붙어서 실제 원인(500 등)이 가려진다. Network 탭에서
+  상태코드부터 볼 것.
+
+#### 배포 시 (메인 프로젝트)
+
+프론트 `daengs.weareithero.cloud` / 백엔드 `daengback.weareithero.cloud`처럼
+도메인을 나눠도 서브도메인이 다르면 cross-origin이므로 미들웨어는 그대로 필요하다.
+
+다만 등록 도메인(`weareithero.cloud`)이 같아 **쿠키 기준으로는 same-site**다.
+인증 쿠키를 `SameSite=Lax` + `Domain=.weareithero.cloud`로 두 서브도메인이 공유할 수
+있다 (완전히 다른 도메인 두 개를 쓸 때보다 유리한 점).
+
+CORS는 보안 장치가 아니다. 브라우저에만 적용되므로 curl이나 서버 간 요청에는
+아무 제약이 걸리지 않는다. 실제 방어는 인증·인가에서 한다.
+
 ### 동작 확인
 
 ```

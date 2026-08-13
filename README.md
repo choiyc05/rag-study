@@ -5,6 +5,8 @@
 AI-X 15기 4조 메인프로젝트에 활용할 기술들/환경세팅 등 학습하는 프로젝트
 ```
 
+> 환경 세팅 상세와 설계 결정 기록은 [docs/](docs/README.md)에 정리되어 있다.
+
 ### Backend
 - `uv`로 프로젝트 관리
 - `python`버전 3.12 고정
@@ -38,6 +40,7 @@ AI-X 15기 4조 메인프로젝트에 활용할 기술들/환경세팅 등 학�
 **Backend** (http://localhost:8000)
 ```bash
 cd backend
+copy .env.example .env
 uv sync              # .venv 생성 + 의존성 설치
 uv run fastapi dev
 ```
@@ -49,7 +52,8 @@ npm install
 npm run dev
 ```
 
-**DB**
+**DB** (프로젝트 루트에서 실행)
 ```bash
+copy .env.example .env
 docker compose up -d
 ```
