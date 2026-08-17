@@ -148,7 +148,7 @@ top-5가 실질 1건이 되는데 **에러가 안 나서 발견이 늦다.**
 |---|---|---|
 | 0-1 | zip → JSONL 전처리 (`scripts/prepare_data.py`) | `data/normalized/aihub_qa.jsonl` 21,606건 |
 | 0-2 | 구어체 변형 평가셋 (`scripts/make_evalset.py`) | 질의 500건 + 정답 ID |
-| 0-3 | 모델 3개 임베딩 (`scripts/embed.py`, Colab) | parquet 3개 |
+| 0-3 | 모델 3개 임베딩 (`scripts/embed.py`, **RunPod**) | parquet 3개 |
 | 0-4 | numpy 브루트포스 평가 (`scripts/evaluate.py`) | Hit Rate@1/5/20, MRR |
 
 **완료 기준:** experiments.md에 **모델 3개의 Hit Rate·MRR 숫자가 채워지고,
@@ -164,8 +164,16 @@ zip을 풀지 않고 그대로 읽어 21,606건을 파싱한다. ⚠️ `ROOT` �
 
 **주의:** `utf-8-sig`로 읽을 것. BOM 때문에 첫 키가 `meta`로 안 잡힌다.
 
-**막힌 것:** GPU VRAM이 4GB인지 8GB인지 확인. 리랭커는 로컬 상주 필수라
-임베딩+리랭커 동시 로드 가능 여부가 Phase 1 구성을 가른다.
+**실행 환경 (2026-08-17 확정):** 로컬 **RTX 3050 6GB**, 오프라인 임베딩은 **RunPod**.
+막혀 있던 VRAM 항목은 해소됐다 — fp16이면 임베딩+리랭커 동시 로드가 2.2GB라 여유 있다.
+상세는 [rag-design.md](rag-design.md) "실행 환경".
+
+0-3은 로컬 3050으로도 모델 3개에 ~1시간이면 끝나는 규모다. RunPod으로 가는 건
+**연습 목적**이고 비용은 $1 미만이다. 원격 GPU가 실제로 필요해지는 건 Phase 3의 STT.
+
+⚠️ **새로 생긴 걱정거리는 VRAM이 아니라 리랭커 지연이다.** 3050에서 20쌍 리랭킹이
+2초 안팎으로 추정된다(계산상). 사실이면 Phase 1의 정확도 실험보다 이게 먼저 벽이 된다.
+→ Phase 1 R-2에서 **실측이 최우선**.
 
 ---
 
