@@ -10,6 +10,7 @@
 | **[roadmap.md](roadmap.md)** | **단계별 실행 계획. 다음에 뭘 할지는 여기부터** |
 | **[experiments.md](experiments.md)** | **실험 기록. 이 프로젝트의 결과물** |
 | [data-expansion.md](data-expansion.md) | 데이터 확장 전략 (수집 · 편입 방식) |
+| [mentor-feedback.md](mentor-feedback.md) | 멘토 피드백 원문 기록 + 반영 현황 |
 
 ## 현재 상태 (2026-08-17 기준)
 
@@ -22,6 +23,9 @@
 다른 레포에서 빠르게 만든 RAG 프로토타입으로 피드백을 받았다.
 **그 레포의 코드는 가져오지 않는다** (빠르게 만드느라 이해하지 못한 채 넘어간 부분이
 많아, 없는 것으로 치고 계획부터 다시 세운다).
+
+피드백 원문은 [mentor-feedback.md](mentor-feedback.md)에 그대로 남겨두었다 —
+나중에 "이건 내 판단인가 멘토 조언인가"를 구분할 수 있어야 하기 때문이다.
 
 기존 설계에 **이미 반영돼 있던 것**: EDA 선행, 리랭킹, Hit Rate/MRR(=지표 1),
 LLM-as-a-judge(=지표 2), 리더보드 맹신 금지, 청킹 전략 비교.
