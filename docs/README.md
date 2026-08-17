@@ -7,8 +7,50 @@
 | [setup.md](setup.md) | 환경 세팅 (Python 3.12, uv, 백엔드 구조, Docker, git 설정) |
 | [dataset-analysis.md](dataset-analysis.md) | AI Hub 데이터셋 실측 분석 결과 |
 | [rag-design.md](rag-design.md) | RAG 설계 결정과 그 근거 |
+| **[roadmap.md](roadmap.md)** | **단계별 실행 계획. 다음에 뭘 할지는 여기부터** |
+| **[experiments.md](experiments.md)** | **실험 기록. 이 프로젝트의 결과물** |
+| [data-expansion.md](data-expansion.md) | 데이터 확장 전략 (수집 · 편입 방식) |
 
-## 현재 상태 (2026-08-13 기준)
+## 현재 상태 (2026-08-17 기준)
+
+- 코드는 **2026-08-13 이후 변경 없음.** 마지막 커밋 `4e810d0`은 문서 3개 수정
+- 멘토 피드백 반영해 **실행 계획 수립 완료** → [roadmap.md](roadmap.md)
+- **RAG 구현은 아직 0%.** 다음 착수 지점은 roadmap의 **Phase 0**
+
+### 2026-08-17 — 멘토 피드백 반영
+
+다른 레포에서 빠르게 만든 RAG 프로토타입으로 피드백을 받았다.
+**그 레포의 코드는 가져오지 않는다** (빠르게 만드느라 이해하지 못한 채 넘어간 부분이
+많아, 없는 것으로 치고 계획부터 다시 세운다).
+
+기존 설계에 **이미 반영돼 있던 것**: EDA 선행, 리랭킹, Hit Rate/MRR(=지표 1),
+LLM-as-a-judge(=지표 2), 리더보드 맹신 금지, 청킹 전략 비교.
+
+**새로 들어온 것** (대조표는 [roadmap.md](roadmap.md) §1):
+
+| 항목 | 반영 위치 |
+|---|---|
+| 하이브리드 검색 (BM25 + RRF) | roadmap §3 — 한국어 BM25를 앱단/DB단 중 어디서 돌릴지 결정 필요 |
+| Parent-Child 청킹 | roadmap §4 — 기존 `content`/`payload` 구조로 스키마 변경 없이 가능 |
+| Semantic chunking | 청킹 비교군에 추가 |
+| 주기적 크롤링 · 유튜브 STT · Docling | [data-expansion.md](data-expansion.md) |
+| 실험 수치 기록 양식 | [experiments.md](experiments.md) 신설 |
+| 상충 데이터를 지우지 말 것 | data-expansion §9 |
+
+**용어 정리:** 멘토가 말한 `Hit Rate@k`와 기존 문서의 `Recall@k`는
+정답이 1개인 known-item 설계에서 **같은 값**이다. `Hit Rate@k`로 통일한다.
+
+### 데이터 확장에 대한 판단 (신규)
+
+AI Hub QA는 **질문을 임베딩**하는데 앞으로 모을 데이터는 대부분 **문서**라,
+그냥 넣으면 대칭/비대칭 매칭이 한 인덱스에 섞인다.
+→ **doc2query**(문서에서 질문을 생성해 그 질문을 인덱싱)로 형태를 맞춘다.
+
+그리고 지금 부족한 건 양이 아니라 **주제**다. AI Hub는 5개 진료과의 *질병* 상담뿐이고
+사료·행동·훈련·미용은 **한 건도 없다** — 서비스 이름은 "생활 비서"인데.
+→ 수집 전에 **커버리지 공백 진단**부터. 상세는 [data-expansion.md](data-expansion.md).
+
+## 이전 기록 (2026-08-13 기준)
 
 - 백엔드 / 프론트 / DB 기초 세팅 완료, `main`에 푸시됨 (`c8001cb`)
 - 데이터 분석 완료 — [dataset-analysis.md](dataset-analysis.md)
@@ -48,44 +90,25 @@ RAG 본작업과는 별개로, 메인 프로젝트에 그대로 옮길 골격을
 
 ## 다음 할 일
 
-상세 근거는 전부 [rag-design.md](rag-design.md)에 있다. 여기는 순서만.
+**→ [roadmap.md](roadmap.md)의 Phase 0.** 단계별 상세와 완료 기준은 전부 거기 있다.
+여기서는 중복해서 적지 않는다 (두 곳에 적으면 반드시 어긋난다).
 
-### 진행 중인 것부터 — 내일 여기서 시작
-
-**1. `scripts/prepare_data.py`** — zip → JSONL
-
-- QA 21,606건: `utf-8-sig`로 읽을 것 (BOM 때문에 첫 키가 `meta`로 안 잡힌다)
-- 원천 239건: **전처리(각주번호·표캡션·영어문단 제거) → 청킹** 순서
-- 출력은 `content` / `payload` / `source` / 메타데이터 형태로 (스키마는 rag-design 참고)
-- 파싱 로직은 **`scripts/verify_data.py`에 이미 검증된 게 있다.** zip을 풀지 않고
-  그대로 읽어 21,606건을 파싱하므로 여기서 잘라 쓰면 된다
-  (`uv run python ../scripts/verify_data.py`로 언제든 데이터 상태 재확인 가능)
-
-**2. 구어체 변형셋** — Validation 2,400건 → 지표 1 질의셋.
-HF `Sr523/big-red-bark-chat-evaluation` 질문 100개를 훑어 few-shot 예시로 쓸 것
-
-**3~6.** 모델 3개 임베딩(Colab) → numpy로 지표 1 비교 → 모델·차원 확정 →
-DB 적재 → 리랭커 → 원천데이터 A/B → 서비스 연결
+요약하면 — `prepare_data.py`(zip → JSONL) → 구어체 평가셋 → 모델 3개 임베딩(Colab)
+→ numpy로 Hit Rate/MRR 비교 → **모델·차원 확정.** 여기까지 DB는 필요 없다.
 
 ### 막힌 것 — 시작 전에 확인 필요
 
 - **GPU VRAM이 4GB인지 8GB인지.** 임베딩(~2GB) + 리랭커(~2GB) 동시 로드가
   가능한지가 갈린다. Colab을 쓰더라도 리랭커는 로컬 상주라 이게 결정적
 
-### 계류 중인 수정 (하기로 정했으나 아직 손 안 댐)
+### 계류 중인 수정
 
-| 대상 | 내용 |
-|---|---|
-| `compose.yaml` | **`shm_size: 1gb`** — 없으면 `CREATE INDEX`가 `No space left on device`로 죽는다. 디스크가 아니라 컨테이너 공유메모리 얘기라 메시지가 원인을 안 가리킨다 |
-| `models/document.py` | 주석 속 정의가 설계와 불일치. 차원 확정 후 새로 작성 |
-| `repositories/` | 지금 `SourceItem`(스키마)을 반환 중. **A안으로 감** — repository는 `SearchResult(document, score)` dataclass를 반환하고 service가 스키마로 변환 |
-| `pyproject.toml` | `transformers<5` 고정 필요 (5.x에서 리랭커가 `prepare_for_model` 없음으로 죽음) |
+하기로 정했으나 아직 손 안 댄 것들. **[roadmap.md](roadmap.md) Phase 2에서 함께 처리**한다
+(`compose.yaml` `shm_size`, `models/document.py` 재작성, repository 반환 타입,
+`transformers<5` 고정, `verify_data.py` 하드코딩 경로).
 
 ### 참고 — 직전 시도의 실측 기록
 
 Notion **`🧪 RAG 학습 메모 — 임베딩 · 인덱싱 · 리랭커`** (2026-08-12).
-모델 선택은 이번에 다시 정하지만, **삽 포인트 목록은 모델과 무관하게 유효**하다:
-배치 크기 8(100은 패딩 때문에 더 느림), 임베딩과 적재 분리 + 400건마다 커밋,
-advisory lock으로 중복 적재 방지, HNSW opclass 불일치 시 **에러 없이** 완전탐색,
-필터 걸면 후보가 조용히 반토막(`hnsw.iterative_scan`), `use_fp16=True`,
-Gemini 모델명은 `client.models.list()`로 확인.
+모델 선택은 이번에 다시 정하지만 **삽 포인트 목록은 모델과 무관하게 유효**하며,
+[experiments.md](experiments.md)의 "삽질 기록"에 옮겨두었다.
