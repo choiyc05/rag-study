@@ -56,8 +56,9 @@ export default async function LabIndex() {
                 <span>
                   기준선{" "}
                   <span className="font-mono">
-                    {e.baseline.run ? `${e.baseline.run}:` : ""}
-                    {e.baseline.arm_id}
+                    {e.baseline
+                      ? `${e.baseline.run ? `${e.baseline.run}:` : ""}${e.baseline.arm_id}`
+                      : "arm별"}
                   </span>
                 </span>
                 <Link href={`/lab/${e.experiment_id}/ranks`} className="text-blue-600 hover:underline dark:text-blue-400">

@@ -91,6 +91,60 @@ def load_model_dir(d: Path):
                 src_dir=str(d).replace("\\", "/"), kinds=kinds, ids=ids, X=X)
 
 
+def twin_map(eval_rows):
+    """같은 구어체 질의가 서로 다른 원본에서 나오는 경우가 있다(실측 5건/2,399).
+
+    그러면 정답이 둘인데 하나만 정답으로 치므로, 쌍둥이가 위에 오면 순위가
+    부당하게 밀린다. 순위를 셀 때 '같은 질의를 공유하는 다른 정답'은 제외한다.
+
+    **1b_rerank.py도 이 함수를 쓴다.** 보정 규칙이 두 벌이 되면 리랭킹 결과와
+    기준선의 채점 기준이 달라지는데, 그건 에러 없이 Δ만 틀리게 만든다.
+    """
+    twins = {}
+    for r in eval_rows:
+        twins.setdefault(r["query"], []).append(r["answer_id"])
+    return {r["answer_id"]: [a for a in twins[r["query"]] if a != r["answer_id"]]
+            for r in eval_rows}
+
+
+def summarize(ranks_by_aid, eval_rows):
+    """질의별 순위 → Hit@k · MRR · 하위 그룹. **채점 집계의 유일한 구현이다.**
+
+    벡터 검색이든 리랭킹이든 "질의별 정답 순위"까지 만들면 그다음은 똑같다.
+    여기를 한 곳으로 모아둬야 R-2의 숫자가 B-0과 같은 방식으로 계산된다.
+    """
+    import numpy as np
+
+    meta = {r["answer_id"]: r for r in eval_rows}
+    aids = list(ranks_by_aid)
+    r = np.array([ranks_by_aid[a] for a in aids])
+    keep = [meta.get(a, {}) for a in aids]
+
+    out = {f"Hit@{k}": float((r <= k).mean()) for k in KS}
+    out["MRR"] = float((1.0 / r).mean())
+    out["n"] = len(r)
+
+    # 하위 그룹. 전체 평균만 보면 얇은 진료과와 복합 질문의 개선이 묻힌다.
+    groups = {}
+    for name, sel in [
+        ("복합 질문 파생", [i for i, m in enumerate(keep) if m.get("orig_is_multi")]),
+        ("단일 주제 파생", [i for i, m in enumerate(keep) if m and not m.get("orig_is_multi")]),
+    ]:
+        if sel:
+            rr = r[sel]
+            groups[name] = {"n": len(rr), "Hit@5": float((rr <= 5).mean()),
+                            "MRR": float((1.0 / rr).mean())}
+    depts = {}
+    for m, rank in zip(keep, r):
+        depts.setdefault(m.get("department", "?"), []).append(int(rank))
+
+    out["_groups"], out["_depts"] = groups, depts
+    # 모델 간 '짝지은' 비교용. 질의별 순위를 answer_id로 남긴다.
+    # 평균만 비교하면 ΔMRR 0.004가 실력인지 잡음인지 구분이 안 된다.
+    out["_ranks"] = {a: int(ranks_by_aid[a]) for a in aids}
+    return out
+
+
 def evaluate(pack, eval_rows):
     import numpy as np
 
@@ -104,23 +158,13 @@ def evaluate(pack, eval_rows):
         raise SystemExit(f"[!] {pack['model']}: 질의 임베딩이 없다. 03_embed.py를 평가셋과 함께 돌릴 것.")
 
     pos = {d: i for i, d in enumerate(doc_ids)}          # 정답 행 -> 인덱스 위치
-    meta = {r["answer_id"]: r for r in eval_rows}
 
-    # 같은 구어체 질의가 서로 다른 원본에서 나오는 경우가 있다(실측 5건/2,399).
-    # 그러면 정답이 둘인데 하나만 정답으로 치므로, 쌍둥이가 위에 오면 순위가
-    # 부당하게 밀린다. 순위를 셀 때 '같은 질의를 공유하는 다른 정답'은 제외한다.
-    twins = {}
-    for r in eval_rows:
-        twins.setdefault(r["query"], []).append(r["answer_id"])
-    twin_of = {r["answer_id"]: [a for a in twins[r["query"]] if a != r["answer_id"]]
-               for r in eval_rows}
+    twin_of = twin_map(eval_rows)
     n_twin = sum(1 for v in twin_of.values() if v)
     if n_twin:
         print(f"  [보정] 질의가 겹치는 정답 {n_twin}건 — 순위 계산에서 쌍둥이 제외")
 
-    ranks = []
-    keep = []
-    q_ids_kept = []
+    ranks_by_aid = {}
     # 질의를 나눠서 처리한다. 2,400 × 21,606 float32 = 200MB라 한 번에도 되지만
     # 질의가 늘어나면 터지므로 처음부터 배치로 짜둔다.
     B = 256
@@ -138,33 +182,9 @@ def evaluate(pack, eval_rows):
                 ti = pos.get(t)
                 if ti is not None and sims[j, ti] > sims[j, gold]:
                     better -= 1
-            ranks.append(better + 1)
-            keep.append(meta.get(aid, {}))
-            q_ids_kept.append(aid)
+            ranks_by_aid[str(aid)] = better + 1
 
-    r = np.array(ranks)
-    out = {f"Hit@{k}": float((r <= k).mean()) for k in KS}
-    out["MRR"] = float((1.0 / r).mean())
-    out["n"] = len(r)
-
-    # 하위 그룹. 전체 평균만 보면 얇은 진료과와 복합 질문의 개선이 묻힌다.
-    groups = {}
-    for name, sel in [
-        ("복합 질문 파생", [i for i, m in enumerate(keep) if m.get("orig_is_multi")]),
-        ("단일 주제 파생", [i for i, m in enumerate(keep) if m and not m.get("orig_is_multi")]),
-    ]:
-        if sel:
-            rr = r[sel]
-            groups[name] = {"n": len(rr), "Hit@5": float((rr <= 5).mean()),
-                            "MRR": float((1.0 / rr).mean())}
-    depts = {}
-    for m, rank in zip(keep, r):
-        depts.setdefault(m.get("department", "?"), []).append(rank)
-    out["_groups"], out["_depts"] = groups, depts
-    # 모델 간 '짝지은' 비교용. 질의별 순위를 answer_id로 남긴다.
-    # 평균만 비교하면 ΔMRR 0.004가 실력인지 잡음인지 구분이 안 된다.
-    out["_ranks"] = {aid: int(rk) for aid, rk in zip(q_ids_kept, r)}
-    return out
+    return summarize(ranks_by_aid, eval_rows)
 
 
 def resolve_arm_ids(results, overrides, sweeping_dims):
@@ -311,18 +331,25 @@ def save_results(out_dir: Path, results, paired, eval_rows, *, base, run_env, ar
         "index": {"file": str(DOCS_DEFAULT).replace("\\", "/"), "n_docs": 21606,
                   "embedded_field": "content(질문)"},
         "queries": {"file": str(EVAL_DEFAULT).replace("\\", "/"), "n": results[0]["n"]},
-        "baseline": {"run": base.get("run"), "arm_id": base["arm_id"]},
+        # arm마다 기준선이 다르면(Phase 1은 "자기 모델의 B-0 대비"라 보통 그렇다)
+        # 공통 기준선이 없다. null로 두고 paired_tests[].base를 보게 한다.
+        "baseline": {"run": base.get("run"), "arm_id": base["arm_id"]}
+                    if base.get("arm_id") else None,
         "arms": [
             {"arm_id": r["arm_id"],
-             "label": r["model"].split("/")[-1] + (f" @{r['dim']}d" if r.get("truncated") else ""),
+             "label": r.get("label")
+                      or r["model"].split("/")[-1] + (f" @{r['dim']}d" if r.get("truncated") else ""),
              "model": r["model"],
              "config": {"dim": r["dim"], "query_prefix": r["qp"], "passage_prefix": r["pp"],
                         "truncate_dim": r["truncate_dim"], "max_seq_len": r["max_seq_len"],
-                        "embedded_field": "content", "reranker": None,
-                        "top_k_candidates": None, "src_dir": r["src_dir"]},
+                        "embedded_field": "content", "reranker": r.get("reranker"),
+                        "top_k_candidates": r.get("top_k_candidates"),
+                        "rerank_max_length": r.get("rerank_max_length"),
+                        "src_dir": r["src_dir"]},
              "metrics": {k: r[k] for k in ("Hit@1", "Hit@5", "Hit@20", "MRR", "n")},
-             # ⚠️ null은 "안 쟀다"는 뜻이다. Phase 1 R-2에서 채운다.
-             "latency_ms": {"search_p50": None, "rerank_p50": None, "e2e_p95": None},
+             # ⚠️ null은 "안 쟀다"는 뜻이다. 0이 아니다. R-2(1b_rerank.py)가 채운다.
+             "latency_ms": r.get("latency_ms")
+                           or {"search_p50": None, "rerank_p50": None, "e2e_p95": None},
              "groups": r["_groups"],
              "depts": {k: {"n": len(v), "Hit@5": sum(1 for x in v if x <= 5) / len(v)}
                        for k, v in r["_depts"].items()}}

@@ -21,6 +21,8 @@ export default async function ExperimentPage({
   const deltaOf = new Map(exp.paired_tests.map((p) => [p.arm_id, p]));
   const arms = [...exp.arms].sort((a, b) => b.metrics.MRR - a.metrics.MRR);
   const groupNames = [...new Set(exp.arms.flatMap((a) => Object.keys(a.groups)))];
+  const hasReranker = exp.arms.some((a) => a.config.reranker);
+  const hasLatency = exp.arms.some((a) => a.latency_ms.e2e_p95 !== null);
 
   return (
     <div className="space-y-12">
@@ -44,18 +46,39 @@ export default async function ExperimentPage({
       <section>
         <h2 className="mb-1 text-sm font-semibold">arm별 결과</h2>
         <p className="mb-3 text-xs text-zinc-500">
-          Δ는 기준선{" "}
-          <span className="font-mono">
-            {exp.baseline.run ? `${exp.baseline.run}:` : ""}
-            {exp.baseline.arm_id}
-          </span>{" "}
-          대비 · 95% 구간이 0을 품으면 <strong>차이 없음</strong>
+          {exp.baseline ? (
+            <>
+              Δ는 기준선{" "}
+              <span className="font-mono">
+                {exp.baseline.run ? `${exp.baseline.run}:` : ""}
+                {exp.baseline.arm_id}
+              </span>{" "}
+              대비
+            </>
+          ) : (
+            // Phase 1은 "자기 모델의 B-0 대비"라 arm마다 기준선이 다르다.
+            <>Δ는 <strong>각 arm의 기준선</strong> 대비 — 모델끼리 섞어서 비교하지 않는다</>
+          )}{" "}
+          · 95% 구간이 0을 품으면 <strong>차이 없음</strong>
         </p>
         <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
           <table className="w-full border-collapse text-[13px]">
             <thead className="bg-zinc-50 dark:bg-zinc-900">
               <tr>
-                {["arm", "모델", "차원", "prefix", "Hit@1", "Hit@5", "Hit@20", "MRR", "ΔMRR", "95% 구간", "판정"].map(
+                {[
+                  "arm",
+                  "모델",
+                  ...(hasReranker ? ["리랭커"] : ["차원", "prefix"]),
+                  "Hit@1",
+                  "Hit@5",
+                  "Hit@20",
+                  "MRR",
+                  ...(exp.baseline ? [] : ["기준"]),
+                  "ΔMRR",
+                  "95% 구간",
+                  "판정",
+                  ...(hasLatency ? ["지연 p95"] : []),
+                ].map(
                   (h) => (
                     <th key={h} className="whitespace-nowrap border-b border-zinc-200 px-3 py-2 text-left font-semibold dark:border-zinc-800">
                       {h}
@@ -67,7 +90,7 @@ export default async function ExperimentPage({
             <tbody>
               {arms.map((a) => {
                 const d = deltaOf.get(a.arm_id);
-                const isBase = !exp.baseline.run && a.arm_id === exp.baseline.arm_id;
+                const isBase = !!exp.baseline && !exp.baseline.run && a.arm_id === exp.baseline.arm_id;
                 return (
                   <tr key={a.arm_id} className={isBase ? "bg-blue-50/50 dark:bg-blue-950/20" : undefined}>
                     <td className="whitespace-nowrap border-b border-zinc-100 px-3 py-2 font-mono font-semibold dark:border-zinc-900">
@@ -75,19 +98,41 @@ export default async function ExperimentPage({
                       {isBase && <span className="ml-1 text-[10px] font-normal text-blue-600 dark:text-blue-400">기준</span>}
                     </td>
                     <td className="border-b border-zinc-100 px-3 py-2 dark:border-zinc-900">{a.model}</td>
-                    <td className="border-b border-zinc-100 px-3 py-2 text-right tabular-nums dark:border-zinc-900">{a.config.dim}</td>
-                    <td className="whitespace-nowrap border-b border-zinc-100 px-3 py-2 dark:border-zinc-900">
-                      {a.config.query_prefix ? (
-                        <code className="font-mono text-[11px]">{a.config.query_prefix}</code>
-                      ) : (
-                        <span className="text-zinc-400">없음</span>
-                      )}
-                    </td>
+                    {hasReranker ? (
+                      <td className="border-b border-zinc-100 px-3 py-2 text-[12px] dark:border-zinc-900">
+                        {a.config.reranker ? (
+                          <>
+                            {a.config.reranker.split("/").pop()}
+                            <span className="ml-1 text-zinc-400">
+                              top {a.config.top_k_candidates} · len {a.config.rerank_max_length}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-zinc-400">없음</span>
+                        )}
+                      </td>
+                    ) : (
+                      <>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-right tabular-nums dark:border-zinc-900">{a.config.dim}</td>
+                        <td className="whitespace-nowrap border-b border-zinc-100 px-3 py-2 dark:border-zinc-900">
+                          {a.config.query_prefix ? (
+                            <code className="font-mono text-[11px]">{a.config.query_prefix}</code>
+                          ) : (
+                            <span className="text-zinc-400">없음</span>
+                          )}
+                        </td>
+                      </>
+                    )}
                     {(["Hit@1", "Hit@5", "Hit@20", "MRR"] as const).map((k) => (
                       <td key={k} className="border-b border-zinc-100 px-3 py-2 text-right font-mono tabular-nums dark:border-zinc-900">
                         {fmt.n3(a.metrics[k])}
                       </td>
                     ))}
+                    {!exp.baseline && (
+                      <td className="whitespace-nowrap border-b border-zinc-100 px-3 py-2 font-mono text-[11px] text-zinc-500 dark:border-zinc-900">
+                        {d ? `${d.base.run ? `${d.base.run}:` : ""}${d.base.arm_id}` : "—"}
+                      </td>
+                    )}
                     <td className="border-b border-zinc-100 px-3 py-2 text-right font-mono tabular-nums dark:border-zinc-900">
                       {d ? fmt.d4(d.delta_mrr) : "—"}
                     </td>
@@ -101,6 +146,15 @@ export default async function ExperimentPage({
                         "—"
                       )}
                     </td>
+                    {hasLatency && (
+                      <td className="border-b border-zinc-100 px-3 py-2 text-right font-mono tabular-nums dark:border-zinc-900">
+                        {a.latency_ms.e2e_p95 === null ? (
+                          <span className="text-zinc-400">안 쟀음</span>
+                        ) : (
+                          `${a.latency_ms.e2e_p95}ms`
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -108,7 +162,17 @@ export default async function ExperimentPage({
           </table>
         </div>
         <p className="mt-2 text-xs text-zinc-500">
-          지연(latency)은 이 실험에서 재지 않았다 — <span className="font-mono">null</span>은 0이 아니라 &ldquo;안 쟀다&rdquo;는 뜻이다.
+          {hasLatency ? (
+            <>
+              지연은 <strong>한 요청 = 질의 1건 × 후보 N쌍</strong>의 서비스 형태로 쟀다(정확도 실행의
+              배치와 다르다). 표의 값은 검색+리랭킹 p95이고 LLM 생성은 빠져 있다.
+            </>
+          ) : (
+            <>
+              지연(latency)은 이 실험에서 재지 않았다 — <span className="font-mono">null</span>은 0이 아니라
+              &ldquo;안 쟀다&rdquo;는 뜻이다.
+            </>
+          )}
         </p>
       </section>
 

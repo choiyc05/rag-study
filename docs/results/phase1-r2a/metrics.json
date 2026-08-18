@@ -1,0 +1,285 @@
+{
+  "schema_version": 1,
+  "experiment_id": "phase1-r2a",
+  "phase": "1",
+  "title": "R-2a — 리랭커 bge-reranker-v2-m3 (후보 20 → 5)",
+  "question": "리랭커가 검색 품질을 얼마나 올리는가 — 그리고 임베딩 모델 간 격차가 그 뒤에도 남는가",
+  "verdict": "세 arm 모두 상승(A +0.024 · K +0.020 · B +0.083) — 기법이 진짜다. 지연은 e2e p95 573~626ms로 '2초 안팎' 추정이 4배 비관적이었다. ⚠️ 가장 중요한 결과는 리랭커가 임베딩 모델 격차의 87%를 흡수했다는 것이다(A→bge-m3 −0.068 → −0.009). 임베딩 모델 선택의 중요도가 내려가 Phase 2 우선순위가 바뀐다. 복합 질문 격차도 −12.6%p → −6.9%p로 절반이 줄어 R-6의 기대 효과를 낮춰 잡아야 한다.",
+  "measured_at": "2026-08-18",
+  "metric": "known-item retrieval (지표 1)",
+  "run_env": {
+    "search": "brute-force inner product (normalized)",
+    "bootstrap": {
+      "n": 2000,
+      "seed": 42
+    },
+    "truncate_sweep": null,
+    "reranker": {
+      "model": "BAAI/bge-reranker-v2-m3",
+      "device": "cuda",
+      "fp16": true,
+      "max_length": 512,
+      "candidates": 20,
+      "latency_batch": 20,
+      "accuracy_batch": 64,
+      "latency_sample": 100,
+      "checkpoint_dir": "data/rerank_cache",
+      "latency_shape": "질의 1건씩 (서비스 형태). 정확도 실행은 질의 16건씩 몰아서 돌린다"
+    },
+    "note": "RTX 3050 6GB · fp16 · 지연은 질의 1건씩(서비스 형태), 정확도는 16질의씩 몰아서"
+  },
+  "index": {
+    "file": "data/normalized/aihub_qa.jsonl",
+    "n_docs": 21606,
+    "embedded_field": "content(질문)"
+  },
+  "queries": {
+    "file": "data/normalized/evalset_colloquial.jsonl",
+    "n": 2399
+  },
+  "baseline": null,
+  "arms": [
+    {
+      "arm_id": "R-2a-A",
+      "label": "snowflake-arctic-embed-l-v2.0 + bge-reranker-v2-m3",
+      "model": "Snowflake/snowflake-arctic-embed-l-v2.0",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": "BAAI/bge-reranker-v2-m3",
+        "top_k_candidates": 20,
+        "rerank_max_length": 512,
+        "src_dir": "data/embeddings/snowflake_snowflake_arctic_embed_l_v2_0"
+      },
+      "metrics": {
+        "Hit@1": 0.39433097123801586,
+        "Hit@5": 0.594414339308045,
+        "Hit@20": 0.692788661942476,
+        "MRR": 0.486904898344274,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": 0.24,
+        "rerank_p50": 492,
+        "e2e_p95": 573
+      },
+      "groups": {
+        "복합 질문 파생": {
+          "n": 901,
+          "Hit@5": 0.5516093229744728,
+          "MRR": 0.44088684153541735
+        },
+        "단일 주제 파생": {
+          "n": 1498,
+          "Hit@5": 0.6201602136181575,
+          "MRR": 0.5145833156905889
+        }
+      },
+      "depts": {
+        "외과": {
+          "n": 651,
+          "Hit@5": 0.620583717357911
+        },
+        "피부과": {
+          "n": 301,
+          "Hit@5": 0.627906976744186
+        },
+        "치과": {
+          "n": 129,
+          "Hit@5": 0.49612403100775193
+        },
+        "내과": {
+          "n": 1203,
+          "Hit@5": 0.5777223607647548
+        },
+        "안과": {
+          "n": 115,
+          "Hit@5": 0.6434782608695652
+        }
+      }
+    },
+    {
+      "arm_id": "R-2a-K",
+      "label": "snowflake-arctic-embed-l-v2.0-ko + bge-reranker-v2-m3",
+      "model": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": "BAAI/bge-reranker-v2-m3",
+        "top_k_candidates": 20,
+        "rerank_max_length": 512,
+        "src_dir": "data/embeddings/dragonkue_snowflake_arctic_embed_l_v2_0_ko"
+      },
+      "metrics": {
+        "Hit@1": 0.3918299291371405,
+        "Hit@5": 0.5981659024593581,
+        "Hit@20": 0.7036265110462693,
+        "MRR": 0.4882839480100009,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": 0.23,
+        "rerank_p50": 553,
+        "e2e_p95": 621
+      },
+      "groups": {
+        "복합 질문 파생": {
+          "n": 901,
+          "Hit@5": 0.562708102108768,
+          "MRR": 0.44854306027855345
+        },
+        "단일 주제 파생": {
+          "n": 1498,
+          "Hit@5": 0.6194926568758344,
+          "MRR": 0.5121868451034818
+        }
+      },
+      "depts": {
+        "외과": {
+          "n": 651,
+          "Hit@5": 0.6267281105990783
+        },
+        "피부과": {
+          "n": 301,
+          "Hit@5": 0.6378737541528239
+        },
+        "치과": {
+          "n": 129,
+          "Hit@5": 0.5038759689922481
+        },
+        "내과": {
+          "n": 1203,
+          "Hit@5": 0.5768911055694098
+        },
+        "안과": {
+          "n": 115,
+          "Hit@5": 0.6608695652173913
+        }
+      }
+    },
+    {
+      "arm_id": "R-2a-B",
+      "label": "bge-m3 + bge-reranker-v2-m3",
+      "model": "BAAI/bge-m3",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": "BAAI/bge-reranker-v2-m3",
+        "top_k_candidates": 20,
+        "rerank_max_length": 512,
+        "src_dir": "data/embeddings/baai_bge_m3"
+      },
+      "metrics": {
+        "Hit@1": 0.38724468528553563,
+        "Hit@5": 0.5852438516048354,
+        "Hit@20": 0.6636098374322634,
+        "MRR": 0.47821748483997845,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": 0.23,
+        "rerank_p50": 564,
+        "e2e_p95": 626
+      },
+      "groups": {
+        "복합 질문 파생": {
+          "n": 901,
+          "Hit@5": 0.5482796892341842,
+          "MRR": 0.4333927712542531
+        },
+        "단일 주제 파생": {
+          "n": 1498,
+          "Hit@5": 0.6074766355140186,
+          "MRR": 0.5051781436789228
+        }
+      },
+      "depts": {
+        "외과": {
+          "n": 651,
+          "Hit@5": 0.6113671274961597
+        },
+        "피부과": {
+          "n": 301,
+          "Hit@5": 0.6445182724252492
+        },
+        "치과": {
+          "n": 129,
+          "Hit@5": 0.5348837209302325
+        },
+        "내과": {
+          "n": 1203,
+          "Hit@5": 0.5561097256857855
+        },
+        "안과": {
+          "n": 115,
+          "Hit@5": 0.6434782608695652
+        }
+      }
+    }
+  ],
+  "paired_tests": [
+    {
+      "base": {
+        "run": "phase0-embedding",
+        "arm_id": "E-7"
+      },
+      "arm_id": "R-2a-A",
+      "n": 2399,
+      "delta_mrr": 0.023821958778393798,
+      "ci95": [
+        0.011528252201574388,
+        0.035759057259421585
+      ],
+      "win": 492,
+      "lose": 391,
+      "tie": 1516,
+      "verdict": "상대가 우세"
+    },
+    {
+      "base": {
+        "run": "phase0-embedding",
+        "arm_id": "E-6"
+      },
+      "arm_id": "R-2a-K",
+      "n": 2399,
+      "delta_mrr": 0.020431899984445098,
+      "ci95": [
+        0.008101193911105918,
+        0.03316951387235646
+      ],
+      "win": 498,
+      "lose": 409,
+      "tie": 1492,
+      "verdict": "상대가 우세"
+    },
+    {
+      "base": {
+        "run": "phase0-embedding",
+        "arm_id": "E-2"
+      },
+      "arm_id": "R-2a-B",
+      "n": 2399,
+      "delta_mrr": 0.08341868196325743,
+      "ci95": [
+        0.07076176978343225,
+        0.09614513151478413
+      ],
+      "win": 633,
+      "lose": 287,
+      "tie": 1479,
+      "verdict": "상대가 우세"
+    }
+  ]
+}

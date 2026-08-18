@@ -24,7 +24,7 @@ export default async function RanksPage({
           <code className="font-mono text-[12px]">docs/results/{experiment}/ranks.csv</code>
         </p>
       </header>
-      <RanksExplorer table={table} baselineArm={exp.baseline.arm_id} />
+      <RanksExplorer table={table} baselineArm={exp.baseline?.arm_id ?? table.armIds[0]} />
     </div>
   );
 }

@@ -9,6 +9,7 @@
 | [`phase0-embedding/`](phase0-embedding/) | Phase 0-4 | 임베딩 모델 **6종** 비교 → 기준선 확정 |
 | [`phase0-prefix-ablation/`](phase0-prefix-ablation/) | Phase 0-4 | **같은 모델, prefix만 제거** — MRR −16% |
 | [`phase0-dimension/`](phase0-dimension/) | Phase 0-4 | **같은 모델, 차원만 절단**(MRL) — 1024/768/512/256 |
+| [`phase1-r2a/`](phase1-r2a/) | Phase 1-b (R-2a) | **리랭커** 3종 병행 — 지연 실측 + 모델 격차 87% 흡수 |
 
 ## 파일 규격
 

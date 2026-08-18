@@ -29,6 +29,7 @@ export type Arm = {
     embedded_field: string;
     reranker: string | null;
     top_k_candidates: number | null;
+    rerank_max_length?: number | null;
     src_dir: string;
   };
   metrics: { "Hit@1": number; "Hit@5": number; "Hit@20": number; MRR: number; n: number };
@@ -62,7 +63,8 @@ export type Experiment = {
   run_env: { search: string; bootstrap: { n: number; seed: number }; truncate_sweep: number[] | null; note: string | null };
   index: { file: string; n_docs: number; embedded_field: string };
   queries: { file: string; n: number };
-  baseline: { run: string | null; arm_id: string };
+  /** arm마다 기준선이 다르면 null이다 — 그때는 paired_tests[].base를 봐야 한다. */
+  baseline: { run: string | null; arm_id: string } | null;
   arms: Arm[];
   paired_tests: PairedTest[];
 };
