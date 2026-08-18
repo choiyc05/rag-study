@@ -1,25 +1,62 @@
 {
+  "schema_version": 1,
+  "experiment_id": "phase0-prefix-ablation",
   "phase": "0-4",
+  "title": "prefix 대조군 — 같은 모델, query prefix만 제거",
+  "question": "query prefix를 빠뜨리면 얼마나 나빠지는가",
+  "verdict": "MRR −16%(0.468 → 0.391). 에러는 하나도 나지 않고, 앵커인 bge-m3(0.395)보다 낮아 보인다 — 실제로는 가장 좋은 모델인데 최하위로 기록될 뻔했다. 적재·질의 코드는 리터럴이 아니라 prompt_name으로 모델 등록값을 쓸 것.",
+  "measured_at": "2026-08-18",
   "metric": "known-item retrieval (지표 1)",
+  "run_env": {
+    "search": "brute-force inner product (normalized)",
+    "bootstrap": {
+      "n": 2000,
+      "seed": 42
+    },
+    "truncate_sweep": null,
+    "note": "E-8은 --query-prompt-name 없이 다시 뽑은 벡터(data/embeddings_ablation)"
+  },
   "index": {
-    "file": "data\\normalized\\aihub_qa.jsonl",
+    "file": "data/normalized/aihub_qa.jsonl",
     "n_docs": 21606,
     "embedded_field": "content(질문)"
   },
   "queries": {
-    "file": "data\\normalized\\evalset_colloquial.jsonl",
+    "file": "data/normalized/evalset_colloquial.jsonl",
     "n": 2399
   },
-  "models": [
+  "baseline": {
+    "run": null,
+    "arm_id": "E-6"
+  },
+  "arms": [
     {
+      "arm_id": "E-6",
+      "label": "snowflake-arctic-embed-l-v2.0-ko",
       "model": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "dim": 1024,
-      "prefix": "'query: '/''",
-      "Hit@1": 0.37640683618174237,
-      "Hit@5": 0.5719049604001667,
-      "Hit@20": 0.7036265110462693,
-      "MRR": 0.46785204802555586,
-      "n": 2399,
+      "config": {
+        "dim": 1024,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/dragonkue_snowflake_arctic_embed_l_v2_0_ko"
+      },
+      "metrics": {
+        "Hit@1": 0.37640683618174237,
+        "Hit@5": 0.5719049604001667,
+        "Hit@20": 0.7036265110462693,
+        "MRR": 0.46785204802555586,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
@@ -56,58 +93,32 @@
       }
     },
     {
-      "model": "BAAI/bge-m3",
-      "dim": 1024,
-      "prefix": "없음",
-      "Hit@1": 0.29512296790329307,
-      "Hit@5": 0.5110462692788662,
-      "Hit@20": 0.6636098374322634,
-      "MRR": 0.39479880287672103,
-      "n": 2399,
-      "groups": {
-        "복합 질문 파생": {
-          "n": 901,
-          "Hit@5": 0.4506104328523862,
-          "MRR": 0.3319438455913477
-        },
-        "단일 주제 파생": {
-          "n": 1498,
-          "Hit@5": 0.5473965287049399,
-          "MRR": 0.4326040875990984
-        }
-      },
-      "depts": {
-        "외과": {
-          "n": 651,
-          "Hit@5": 0.5268817204301075
-        },
-        "피부과": {
-          "n": 301,
-          "Hit@5": 0.5614617940199336
-        },
-        "치과": {
-          "n": 129,
-          "Hit@5": 0.5038759689922481
-        },
-        "내과": {
-          "n": 1203,
-          "Hit@5": 0.4945968412302577
-        },
-        "안과": {
-          "n": 115,
-          "Hit@5": 0.46956521739130436
-        }
-      }
-    },
-    {
+      "arm_id": "E-8",
+      "label": "snowflake-arctic-embed-l-v2.0-ko",
       "model": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "dim": 1024,
-      "prefix": "없음",
-      "Hit@1": 0.30179241350562735,
-      "Hit@5": 0.48770320967069614,
-      "Hit@20": 0.6306794497707378,
-      "MRR": 0.3906853750768346,
-      "n": 2399,
+      "config": {
+        "dim": 1024,
+        "query_prefix": "",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings_ablation/dragonkue_snowflake_arctic_embed_l_v2_0_ko"
+      },
+      "metrics": {
+        "Hit@1": 0.30179241350562735,
+        "Hit@5": 0.48770320967069614,
+        "Hit@20": 0.6306794497707378,
+        "MRR": 0.3906853750768346,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
@@ -142,31 +153,103 @@
           "Hit@5": 0.46956521739130436
         }
       }
-    }
-  ],
-  "paired_bootstrap": [
-    {
-      "base": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "model": "BAAI/bge-m3",
-      "n": 2399,
-      "delta_mrr": -0.07305324514883485,
-      "ci95_low": -0.08424992320521478,
-      "ci95_high": -0.061553284103178334,
-      "win": 601,
-      "lose": 1087,
-      "tie": 711,
-      "verdict": "기준이 우세"
     },
     {
-      "base": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "model": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
+      "arm_id": "E-2",
+      "label": "bge-m3",
+      "model": "BAAI/bge-m3",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/baai_bge_m3"
+      },
+      "metrics": {
+        "Hit@1": 0.29512296790329307,
+        "Hit@5": 0.5110462692788662,
+        "Hit@20": 0.6636098374322634,
+        "MRR": 0.39479880287672103,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
+      "groups": {
+        "복합 질문 파생": {
+          "n": 901,
+          "Hit@5": 0.4506104328523862,
+          "MRR": 0.3319438455913477
+        },
+        "단일 주제 파생": {
+          "n": 1498,
+          "Hit@5": 0.5473965287049399,
+          "MRR": 0.4326040875990984
+        }
+      },
+      "depts": {
+        "외과": {
+          "n": 651,
+          "Hit@5": 0.5268817204301075
+        },
+        "피부과": {
+          "n": 301,
+          "Hit@5": 0.5614617940199336
+        },
+        "치과": {
+          "n": 129,
+          "Hit@5": 0.5038759689922481
+        },
+        "내과": {
+          "n": 1203,
+          "Hit@5": 0.4945968412302577
+        },
+        "안과": {
+          "n": 115,
+          "Hit@5": 0.46956521739130436
+        }
+      }
+    }
+  ],
+  "paired_tests": [
+    {
+      "base": {
+        "run": null,
+        "arm_id": "E-6"
+      },
+      "arm_id": "E-8",
       "n": 2399,
       "delta_mrr": -0.07716667294872126,
-      "ci95_low": -0.08517647715678618,
-      "ci95_high": -0.06918611986346032,
+      "ci95": [
+        -0.08529560141410605,
+        -0.0692178893958998
+      ],
       "win": 225,
       "lose": 1342,
       "tie": 832,
+      "verdict": "기준이 우세"
+    },
+    {
+      "base": {
+        "run": null,
+        "arm_id": "E-6"
+      },
+      "arm_id": "E-2",
+      "n": 2399,
+      "delta_mrr": -0.07305324514883485,
+      "ci95": [
+        -0.08424992320521478,
+        -0.061553284103178334
+      ],
+      "win": 601,
+      "lose": 1087,
+      "tie": 711,
       "verdict": "기준이 우세"
     }
   ]

@@ -59,3 +59,21 @@ backend/.venv/Scripts/python.exe scripts/03_embed.py \
 |---|---|
 | `metrics.json` | 지표 · 하위 그룹 · 짝지은 검정 |
 | `ranks.csv` | 질의별 순위. 열 이름에 prefix가 붙어 두 조건이 구분된다 |
+
+---
+
+## 재현
+
+```bash
+backend/.venv/Scripts/python.exe scripts/04_evaluate.py \
+  --emb-dir data/embeddings/dragonkue_snowflake_arctic_embed_l_v2_0_ko --arm-id embeddings/dragonkue=E-6 \
+  --emb-dir data/embeddings_ablation/dragonkue_snowflake_arctic_embed_l_v2_0_ko --arm-id ablation/dragonkue=E-8 \
+  --emb-dir data/embeddings/baai_bge_m3 --arm-id baai=E-2 \
+  --phase 0-4 --measured-at 2026-08-18 --title "prefix 대조군 — 같은 모델, query prefix만 제거" \
+  --save docs/results/phase0-prefix-ablation
+```
+
+**같은 모델이 arm 두 개(E-6·E-8)로 들어가므로 `--emb-dir`로 디렉터리를 직접 지목한다.**
+`--emb-root` 하나만으로는 서로 다른 루트에 있는 벡터를 나란히 놓을 수 없다.
+E-8의 벡터는 `03_embed.py`를 `--query-prompt-name` 없이 돌려 `data/embeddings_ablation/`에
+따로 뽑은 것이다.

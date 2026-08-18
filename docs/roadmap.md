@@ -319,8 +319,14 @@ QA에 적용하지 않는다는 판정은 [dataset-analysis.md](dataset-analysis
 cd backend && uv sync --group ml && cd ..
 # 병행 3종 중 주 후보 — prefix는 모델 등록값을 쓴다(리터럴을 적지 말 것)
 backend/.venv/Scripts/python.exe scripts/03_embed.py     --model Snowflake/snowflake-arctic-embed-l-v2.0 --query-prompt-name query
-backend/.venv/Scripts/python.exe scripts/04_evaluate.py --save docs/results/phase0-embedding
+backend/.venv/Scripts/python.exe scripts/04_evaluate.py \
+  --arm-id dragonkue=E-6 --arm-id embeddings/snowflake=E-7 --arm-id telepix=E-5 \
+  --arm-id nlpai=E-1 --arm-id baai=E-2 --arm-id alibaba=E-3 \
+  --save docs/results/phase0-embedding
 ```
+
+세 결과 폴더의 재현 명령은 각 폴더 README 끝에 있다
+([results/](results/)). 손으로 조립한 결과는 두지 않는다.
 
 ---
 
@@ -337,6 +343,24 @@ Phase 0의 숫자를 기준선으로 두고 **한 번에 하나씩** 켜서 재�
 | 1-d | 메타데이터 필터 (`department`, `life_cycle`) | 치과 879건이 내과 11,049건에 묻히는 문제 |
 | 1-e | 후보 수 20 vs 50 | 리랭커 입력 폭 |
 | 1-f | **긴 QA 의미 분해** | 복합 질문이 한 벡터에 여러 주제를 담고 있다. 선별 `길이 400자+ 또는 의문표현 3개+` = 11,368건(52.6%), LLM 실측 실제 비율 68% |
+
+### 채점 방법 — 매 실험 같은 형태다
+
+`04_evaluate.py`가 Phase 1을 받도록 준비돼 있다(2026-08-18).
+
+```bash
+# R-1의 A arm을 Phase 0의 B-0(E-7)과 짝지어 비교
+backend/.venv/Scripts/python.exe scripts/04_evaluate.py \
+  --phase 1 --exp-id phase1-r1 --arm-id <디렉터리 일부>=R-1-A \
+  --baseline phase0-embedding:E-7 --save docs/results/phase1-r1
+```
+
+⚠️ **`--baseline`을 빠뜨리면 이번 실행의 MRR 1위가 기준이 된다.** Phase 0은 그래도
+됐지만 Phase 1은 "자기 모델의 B-0 대비"라 **매번 명시해야 한다.** 빠뜨려도 에러가
+안 나고 숫자만 딴 것이 나온다.
+
+`arm_id`는 이 표의 ID(R-1-A 등)와 **같은 문자열**을 쓴다 — `metrics.json`·`ranks.csv`·
+이 문서가 한 키로 묶인다. 형식은 [results/README.md](results/README.md).
 
 **완료 기준:** 각 실험이 experiments.md에 한 줄씩 기록되고,
 **"기준선 대비 +N%p" 형태로 기여도를 말할 수 있다.**

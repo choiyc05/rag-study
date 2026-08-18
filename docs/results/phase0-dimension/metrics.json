@@ -1,25 +1,67 @@
 {
+  "schema_version": 1,
+  "experiment_id": "phase0-dimension",
   "phase": "0-4",
+  "title": "차원 절단(MRL) — 같은 모델, 차원만",
+  "question": "차원을 줄이면 얼마를 잃는가 — 모델을 고정하고",
+  "verdict": "1024 확정. 768의 손실은 −0.6%로 통계적으로만 유의하고 실무적으로는 무시할 수준이다. Phase 2에서 DB 용량이나 HNSW 속도가 문제되면 줄이는 카드로 남긴다(MRL 학습 모델 한정, bge-m3 제외). 같은 768차원인데 gte는 0.335, arctic 절단은 0.460 — 차원이 아니라 모델이 성능을 결정한다.",
+  "measured_at": "2026-08-18",
   "metric": "known-item retrieval (지표 1)",
+  "run_env": {
+    "search": "brute-force inner product (normalized)",
+    "bootstrap": {
+      "n": 2000,
+      "seed": 42
+    },
+    "truncate_sweep": [
+      1024,
+      768,
+      512,
+      256
+    ],
+    "note": "arctic base의 벡터를 앞에서 잘라 재정규화. 재임베딩 없음"
+  },
   "index": {
-    "file": "data\\normalized\\aihub_qa.jsonl",
+    "file": "data/normalized/aihub_qa.jsonl",
     "n_docs": 21606,
     "embedded_field": "content(질문)"
   },
   "queries": {
-    "file": "data\\normalized\\evalset_colloquial.jsonl",
+    "file": "data/normalized/evalset_colloquial.jsonl",
     "n": 2399
   },
-  "models": [
+  "baseline": {
+    "run": null,
+    "arm_id": "E-7@1024d"
+  },
+  "arms": [
     {
-      "model": "arctic-base @ 1024d",
-      "dim": 1024,
-      "prefix": "'query: '/''",
-      "Hit@1": 0.37057107127969985,
-      "Hit@5": 0.563151313047103,
-      "Hit@20": 0.692788661942476,
-      "MRR": 0.46316429792192976,
-      "n": 2399,
+      "arm_id": "E-7@1024d",
+      "label": "snowflake-arctic-embed-l-v2.0 @1024d",
+      "model": "Snowflake/snowflake-arctic-embed-l-v2.0",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": 1024,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/snowflake_snowflake_arctic_embed_l_v2_0"
+      },
+      "metrics": {
+        "Hit@1": 0.37057107127969985,
+        "Hit@5": 0.563151313047103,
+        "Hit@20": 0.692788661942476,
+        "MRR": 0.46316429792192976,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
@@ -56,14 +98,32 @@
       }
     },
     {
-      "model": "arctic-base @ 768d",
-      "dim": 768,
-      "prefix": "'query: '/''",
-      "Hit@1": 0.3693205502292622,
-      "Hit@5": 0.5619007919966653,
-      "Hit@20": 0.6865360566902876,
-      "MRR": 0.46014756260063194,
-      "n": 2399,
+      "arm_id": "E-7@768d",
+      "label": "snowflake-arctic-embed-l-v2.0 @768d",
+      "model": "Snowflake/snowflake-arctic-embed-l-v2.0",
+      "config": {
+        "dim": 768,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": 768,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/snowflake_snowflake_arctic_embed_l_v2_0"
+      },
+      "metrics": {
+        "Hit@1": 0.3693205502292622,
+        "Hit@5": 0.5619007919966653,
+        "Hit@20": 0.6865360566902876,
+        "MRR": 0.46014756260063194,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
@@ -100,14 +160,32 @@
       }
     },
     {
-      "model": "arctic-base @ 512d",
-      "dim": 512,
-      "prefix": "'query: '/''",
-      "Hit@1": 0.3605669028761984,
-      "Hit@5": 0.5602334305960817,
-      "Hit@20": 0.6869528970404335,
-      "MRR": 0.45462648744579626,
-      "n": 2399,
+      "arm_id": "E-7@512d",
+      "label": "snowflake-arctic-embed-l-v2.0 @512d",
+      "model": "Snowflake/snowflake-arctic-embed-l-v2.0",
+      "config": {
+        "dim": 512,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": 512,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/snowflake_snowflake_arctic_embed_l_v2_0"
+      },
+      "metrics": {
+        "Hit@1": 0.3605669028761984,
+        "Hit@5": 0.5602334305960817,
+        "Hit@20": 0.6869528970404335,
+        "MRR": 0.45462648744579626,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
@@ -144,14 +222,32 @@
       }
     },
     {
-      "model": "arctic-base @ 256d",
-      "dim": 256,
-      "prefix": "'query: '/''",
-      "Hit@1": 0.3530637765735723,
-      "Hit@5": 0.5518966235931638,
-      "Hit@20": 0.676948728636932,
-      "MRR": 0.44539338096009395,
-      "n": 2399,
+      "arm_id": "E-7@256d",
+      "label": "snowflake-arctic-embed-l-v2.0 @256d",
+      "model": "Snowflake/snowflake-arctic-embed-l-v2.0",
+      "config": {
+        "dim": 256,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": 256,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/snowflake_snowflake_arctic_embed_l_v2_0"
+      },
+      "metrics": {
+        "Hit@1": 0.3530637765735723,
+        "Hit@5": 0.5518966235931638,
+        "Hit@20": 0.676948728636932,
+        "MRR": 0.44539338096009395,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
@@ -188,38 +284,53 @@
       }
     }
   ],
-  "paired_bootstrap": [
+  "paired_tests": [
     {
-      "base": "arctic-base @ 1024d",
-      "model": "arctic-base @ 768d",
+      "base": {
+        "run": null,
+        "arm_id": "E-7@1024d"
+      },
+      "arm_id": "E-7@768d",
       "n": 2399,
       "delta_mrr": -0.003016735321297891,
-      "ci95_low": -0.005895047607010767,
-      "ci95_high": -1.4568906173723671e-05,
+      "ci95": [
+        -0.005895047607010767,
+        -1.4568906173723671e-05
+      ],
       "win": 416,
       "lose": 707,
       "tie": 1276,
       "verdict": "기준이 우세"
     },
     {
-      "base": "arctic-base @ 1024d",
-      "model": "arctic-base @ 512d",
+      "base": {
+        "run": null,
+        "arm_id": "E-7@1024d"
+      },
+      "arm_id": "E-7@512d",
       "n": 2399,
       "delta_mrr": -0.008537810476133553,
-      "ci95_low": -0.012732023025985846,
-      "ci95_high": -0.004131798560470586,
+      "ci95": [
+        -0.012674846017253943,
+        -0.004217975643717901
+      ],
       "win": 465,
       "lose": 751,
       "tie": 1183,
       "verdict": "기준이 우세"
     },
     {
-      "base": "arctic-base @ 1024d",
-      "model": "arctic-base @ 256d",
+      "base": {
+        "run": null,
+        "arm_id": "E-7@1024d"
+      },
+      "arm_id": "E-7@256d",
       "n": 2399,
       "delta_mrr": -0.017770916961835817,
-      "ci95_low": -0.022727643789650108,
-      "ci95_high": -0.01296555506794947,
+      "ci95": [
+        -0.022581075727295695,
+        -0.013009435381847108
+      ],
       "win": 449,
       "lose": 845,
       "tie": 1105,

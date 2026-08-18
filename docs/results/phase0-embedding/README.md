@@ -1,4 +1,4 @@
-# Phase 0-4 — 임베딩 모델 3종 비교
+# Phase 0-4 — 임베딩 모델 6종 비교
 
 **측정일** 2026-08-18 · **판정과 해석은** [../../experiments.md](../../experiments.md) Phase 0 절
 
@@ -42,8 +42,8 @@
 | `arctic-l-v2.0` (base) | −0.0048 | **[−0.0116, +0.0023]** | 703 | 687 | 1,009 | **차이 없음** |
 | `PIXIE-Rune-v1.0` | −0.0201 | [−0.0262, −0.0140] | 640 | 714 | 1,045 | 기준이 우세 |
 | `KURE-v1` | −0.0692 | [−0.0798, −0.0590] | 523 | 1,139 | 737 | 기준이 우세 |
-| `bge-m3` | −0.0731 | [−0.0843, −0.0619] | 601 | 1,087 | 711 | 기준이 우세 |
-| `gte-multilingual-base` | −0.1328 | [−0.1469, −0.1184] | 490 | 1,345 | 564 | 기준이 우세 |
+| `bge-m3` | −0.0731 | [−0.0842, −0.0616] | 601 | 1,087 | 711 | 기준이 우세 |
+| `gte-multilingual-base` | −0.1328 | [−0.1469, −0.1182] | 490 | 1,345 | 564 | 기준이 우세 |
 
 ---
 
@@ -156,3 +156,20 @@ $E scripts/04_evaluate.py --save docs/results/phase0-embedding
 |---|---|
 | `metrics.json` | 모델별 지표 · 하위 그룹 · 진료과별 · 짝지은 검정 |
 | `ranks.csv` | **질의별 정답 순위** — 2,399행 × 모델 3열. 이후 실험과 짝지어 비교하는 원자료 |
+
+---
+
+## 재현
+
+```bash
+backend/.venv/Scripts/python.exe scripts/04_evaluate.py \
+  --arm-id dragonkue=E-6 --arm-id embeddings/snowflake=E-7 --arm-id telepix=E-5 \
+  --arm-id nlpai=E-1 --arm-id baai=E-2 --arm-id alibaba=E-3 \
+  --phase 0-4 --measured-at 2026-08-18 --title "임베딩 모델 6종 비교" \
+  --save docs/results/phase0-embedding
+```
+
+`--arm-id`의 패턴은 **임베딩 디렉터리 경로**에 맞춘다. `embeddings/snowflake`처럼
+앞을 붙인 것은 `dragonkue_snowflake_...`에도 `snowflake`가 들어가기 때문이다
+(먼저 맞는 규칙이 이긴다). arm_id는 `metrics.json`·`ranks.csv`·`experiments.md`에서
+**같은 문자열**이어야 한다.

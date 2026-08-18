@@ -1,4 +1,4 @@
-answer_id,department,orig_is_multi,arctic-base @ 1024d,arctic-base @ 768d,arctic-base @ 512d,arctic-base @ 256d
+answer_id,department,orig_is_multi,E-7@1024d,E-7@768d,E-7@512d,E-7@256d
 9cc895b8-f03e-11ef-b7c9-010101010000,치과,1,1,1,1,1
 9cc91eea-f03e-11ef-a3dd-010101010000,내과,0,1,1,1,1
 9cc945eb-f03e-11ef-9e94-010101010000,외과,1,1,1,1,1

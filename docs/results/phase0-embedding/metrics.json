@@ -1,201 +1,124 @@
 {
+  "schema_version": 1,
+  "experiment_id": "phase0-embedding",
   "phase": "0-4",
+  "title": "임베딩 모델 6종 비교",
+  "question": "어느 임베딩 계열을 쓸 것인가 — 한국어 파인튜닝이 이득인가",
+  "verdict": "한국어 파인튜닝은 이득이 없다. base가 같고 변수가 파인튜닝 하나뿐인 대조군 둘(bge-m3→KURE-v1, arctic→arctic-ko)에서 모두 '차이 없음'이 나왔다. 리더보드로는 각각 +1.46, +2.14점 차였다. 실질 개선은 계열 교체에서만 왔다 — bge-m3 → arctic ΔMRR +0.073(상대 +18%).",
+  "measured_at": "2026-08-18",
   "metric": "known-item retrieval (지표 1)",
+  "run_env": {
+    "search": "brute-force inner product (normalized)",
+    "bootstrap": {
+      "n": 2000,
+      "seed": 42
+    },
+    "truncate_sweep": null,
+    "note": "RTX 3050 6GB · fp16 · max_seq_len=1024 · 길이 정렬 배치 (03_embed.py)"
+  },
   "index": {
-    "file": "data\\normalized\\aihub_qa.jsonl",
+    "file": "data/normalized/aihub_qa.jsonl",
     "n_docs": 21606,
     "embedded_field": "content(질문)"
   },
   "queries": {
-    "file": "data\\normalized\\evalset_colloquial.jsonl",
+    "file": "data/normalized/evalset_colloquial.jsonl",
     "n": 2399
   },
-  "models": [
+  "baseline": {
+    "run": null,
+    "arm_id": "E-6"
+  },
+  "arms": [
     {
-      "model": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "dim": 1024,
-      "prefix": "'query: '/''",
-      "Hit@1": 0.37640683618174237,
-      "Hit@5": 0.5719049604001667,
-      "Hit@20": 0.7036265110462693,
-      "MRR": 0.46785204802555586,
-      "n": 2399,
+      "arm_id": "E-3",
+      "label": "gte-multilingual-base",
+      "model": "Alibaba-NLP/gte-multilingual-base",
+      "config": {
+        "dim": 768,
+        "query_prefix": "",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/alibaba_nlp_gte_multilingual_base"
+      },
+      "metrics": {
+        "Hit@1": 0.25135473113797413,
+        "Hit@5": 0.42309295539808256,
+        "Hit@20": 0.5806586077532305,
+        "MRR": 0.3350543675460856,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
-          "Hit@5": 0.5016648168701443,
-          "MRR": 0.3884206532120045
+          "Hit@5": 0.3507214206437292,
+          "MRR": 0.26341193659571155
         },
         "단일 주제 파생": {
           "n": 1498,
-          "Hit@5": 0.6141522029372497,
-          "MRR": 0.5156275398326384
+          "Hit@5": 0.4666221628838451,
+          "MRR": 0.37814504196950816
         }
       },
       "depts": {
         "외과": {
           "n": 651,
-          "Hit@5": 0.5591397849462365
+          "Hit@5": 0.423963133640553
         },
         "피부과": {
           "n": 301,
-          "Hit@5": 0.6345514950166113
+          "Hit@5": 0.43853820598006643
         },
         "치과": {
           "n": 129,
-          "Hit@5": 0.5193798449612403
+          "Hit@5": 0.3798449612403101
         },
         "내과": {
           "n": 1203,
-          "Hit@5": 0.5635910224438903
+          "Hit@5": 0.42643391521197005
         },
         "안과": {
           "n": 115,
-          "Hit@5": 0.6260869565217392
+          "Hit@5": 0.391304347826087
         }
       }
     },
     {
-      "model": "Snowflake/snowflake-arctic-embed-l-v2.0",
-      "dim": 1024,
-      "prefix": "'query: '/''",
-      "Hit@1": 0.37057107127969985,
-      "Hit@5": 0.5619007919966653,
-      "Hit@20": 0.692788661942476,
-      "MRR": 0.46308293956588015,
-      "n": 2399,
-      "groups": {
-        "복합 질문 파생": {
-          "n": 901,
-          "Hit@5": 0.4827968923418424,
-          "MRR": 0.3762146469417045
-        },
-        "단일 주제 파생": {
-          "n": 1498,
-          "Hit@5": 0.609479305740988,
-          "MRR": 0.5153314920721433
-        }
-      },
-      "depts": {
-        "외과": {
-          "n": 651,
-          "Hit@5": 0.5453149001536098
-        },
-        "피부과": {
-          "n": 301,
-          "Hit@5": 0.6378737541528239
-        },
-        "치과": {
-          "n": 129,
-          "Hit@5": 0.49612403100775193
-        },
-        "내과": {
-          "n": 1203,
-          "Hit@5": 0.5527847049044057
-        },
-        "안과": {
-          "n": 115,
-          "Hit@5": 0.6260869565217392
-        }
-      }
-    },
-    {
-      "model": "telepix/PIXIE-Rune-v1.0",
-      "dim": 1024,
-      "prefix": "'query: '/''",
-      "Hit@1": 0.350562734472697,
-      "Hit@5": 0.5606502709462275,
-      "Hit@20": 0.7032096706961234,
-      "MRR": 0.4477579740335643,
-      "n": 2399,
-      "groups": {
-        "복합 질문 파생": {
-          "n": 901,
-          "Hit@5": 0.4816870144284129,
-          "MRR": 0.35657153881291576
-        },
-        "단일 주제 파생": {
-          "n": 1498,
-          "Hit@5": 0.6081441922563418,
-          "MRR": 0.5026037538291613
-        }
-      },
-      "depts": {
-        "외과": {
-          "n": 651,
-          "Hit@5": 0.5453149001536098
-        },
-        "피부과": {
-          "n": 301,
-          "Hit@5": 0.627906976744186
-        },
-        "치과": {
-          "n": 129,
-          "Hit@5": 0.49612403100775193
-        },
-        "내과": {
-          "n": 1203,
-          "Hit@5": 0.5594347464671654
-        },
-        "안과": {
-          "n": 115,
-          "Hit@5": 0.5565217391304348
-        }
-      }
-    },
-    {
-      "model": "nlpai-lab/KURE-v1",
-      "dim": 1024,
-      "prefix": "없음",
-      "Hit@1": 0.30054189245518964,
-      "Hit@5": 0.5093789078782827,
-      "Hit@20": 0.6636098374322634,
-      "MRR": 0.3986783945271349,
-      "n": 2399,
-      "groups": {
-        "복합 질문 파생": {
-          "n": 901,
-          "Hit@5": 0.4339622641509434,
-          "MRR": 0.31558899161153897
-        },
-        "단일 주제 파생": {
-          "n": 1498,
-          "Hit@5": 0.554739652870494,
-          "MRR": 0.44865406343698255
-        }
-      },
-      "depts": {
-        "외과": {
-          "n": 651,
-          "Hit@5": 0.5084485407066052
-        },
-        "피부과": {
-          "n": 301,
-          "Hit@5": 0.5681063122923588
-        },
-        "치과": {
-          "n": 129,
-          "Hit@5": 0.4883720930232558
-        },
-        "내과": {
-          "n": 1203,
-          "Hit@5": 0.4995843724023275
-        },
-        "안과": {
-          "n": 115,
-          "Hit@5": 0.48695652173913045
-        }
-      }
-    },
-    {
+      "arm_id": "E-2",
+      "label": "bge-m3",
       "model": "BAAI/bge-m3",
-      "dim": 1024,
-      "prefix": "없음",
-      "Hit@1": 0.29512296790329307,
-      "Hit@5": 0.5110462692788662,
-      "Hit@20": 0.6636098374322634,
-      "MRR": 0.39479880287672103,
-      "n": 2399,
+      "config": {
+        "dim": 1024,
+        "query_prefix": "",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/baai_bge_m3"
+      },
+      "metrics": {
+        "Hit@1": 0.29512296790329307,
+        "Hit@5": 0.5110462692788662,
+        "Hit@20": 0.6636098374322634,
+        "MRR": 0.39479880287672103,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
@@ -232,109 +155,338 @@
       }
     },
     {
-      "model": "Alibaba-NLP/gte-multilingual-base",
-      "dim": 768,
-      "prefix": "없음",
-      "Hit@1": 0.25135473113797413,
-      "Hit@5": 0.42309295539808256,
-      "Hit@20": 0.5806586077532305,
-      "MRR": 0.3350543675460856,
-      "n": 2399,
+      "arm_id": "E-6",
+      "label": "snowflake-arctic-embed-l-v2.0-ko",
+      "model": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/dragonkue_snowflake_arctic_embed_l_v2_0_ko"
+      },
+      "metrics": {
+        "Hit@1": 0.37640683618174237,
+        "Hit@5": 0.5719049604001667,
+        "Hit@20": 0.7036265110462693,
+        "MRR": 0.46785204802555586,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
       "groups": {
         "복합 질문 파생": {
           "n": 901,
-          "Hit@5": 0.3507214206437292,
-          "MRR": 0.26341193659571155
+          "Hit@5": 0.5016648168701443,
+          "MRR": 0.3884206532120045
         },
         "단일 주제 파생": {
           "n": 1498,
-          "Hit@5": 0.4666221628838451,
-          "MRR": 0.37814504196950816
+          "Hit@5": 0.6141522029372497,
+          "MRR": 0.5156275398326384
         }
       },
       "depts": {
         "외과": {
           "n": 651,
-          "Hit@5": 0.423963133640553
+          "Hit@5": 0.5591397849462365
         },
         "피부과": {
           "n": 301,
-          "Hit@5": 0.43853820598006643
+          "Hit@5": 0.6345514950166113
         },
         "치과": {
           "n": 129,
-          "Hit@5": 0.3798449612403101
+          "Hit@5": 0.5193798449612403
         },
         "내과": {
           "n": 1203,
-          "Hit@5": 0.42643391521197005
+          "Hit@5": 0.5635910224438903
         },
         "안과": {
           "n": 115,
-          "Hit@5": 0.391304347826087
+          "Hit@5": 0.6260869565217392
+        }
+      }
+    },
+    {
+      "arm_id": "E-1",
+      "label": "KURE-v1",
+      "model": "nlpai-lab/KURE-v1",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/nlpai_lab_kure_v1"
+      },
+      "metrics": {
+        "Hit@1": 0.30054189245518964,
+        "Hit@5": 0.5093789078782827,
+        "Hit@20": 0.6636098374322634,
+        "MRR": 0.3986783945271349,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
+      "groups": {
+        "복합 질문 파생": {
+          "n": 901,
+          "Hit@5": 0.4339622641509434,
+          "MRR": 0.31558899161153897
+        },
+        "단일 주제 파생": {
+          "n": 1498,
+          "Hit@5": 0.554739652870494,
+          "MRR": 0.44865406343698255
+        }
+      },
+      "depts": {
+        "외과": {
+          "n": 651,
+          "Hit@5": 0.5084485407066052
+        },
+        "피부과": {
+          "n": 301,
+          "Hit@5": 0.5681063122923588
+        },
+        "치과": {
+          "n": 129,
+          "Hit@5": 0.4883720930232558
+        },
+        "내과": {
+          "n": 1203,
+          "Hit@5": 0.4995843724023275
+        },
+        "안과": {
+          "n": 115,
+          "Hit@5": 0.48695652173913045
+        }
+      }
+    },
+    {
+      "arm_id": "E-7",
+      "label": "snowflake-arctic-embed-l-v2.0",
+      "model": "Snowflake/snowflake-arctic-embed-l-v2.0",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/snowflake_snowflake_arctic_embed_l_v2_0"
+      },
+      "metrics": {
+        "Hit@1": 0.37057107127969985,
+        "Hit@5": 0.5619007919966653,
+        "Hit@20": 0.692788661942476,
+        "MRR": 0.46308293956588015,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
+      "groups": {
+        "복합 질문 파생": {
+          "n": 901,
+          "Hit@5": 0.4827968923418424,
+          "MRR": 0.3762146469417045
+        },
+        "단일 주제 파생": {
+          "n": 1498,
+          "Hit@5": 0.609479305740988,
+          "MRR": 0.5153314920721433
+        }
+      },
+      "depts": {
+        "외과": {
+          "n": 651,
+          "Hit@5": 0.5453149001536098
+        },
+        "피부과": {
+          "n": 301,
+          "Hit@5": 0.6378737541528239
+        },
+        "치과": {
+          "n": 129,
+          "Hit@5": 0.49612403100775193
+        },
+        "내과": {
+          "n": 1203,
+          "Hit@5": 0.5527847049044057
+        },
+        "안과": {
+          "n": 115,
+          "Hit@5": 0.6260869565217392
+        }
+      }
+    },
+    {
+      "arm_id": "E-5",
+      "label": "PIXIE-Rune-v1.0",
+      "model": "telepix/PIXIE-Rune-v1.0",
+      "config": {
+        "dim": 1024,
+        "query_prefix": "query: ",
+        "passage_prefix": "",
+        "truncate_dim": null,
+        "max_seq_len": null,
+        "embedded_field": "content",
+        "reranker": null,
+        "top_k_candidates": null,
+        "src_dir": "data/embeddings/telepix_pixie_rune_v1_0"
+      },
+      "metrics": {
+        "Hit@1": 0.350562734472697,
+        "Hit@5": 0.5606502709462275,
+        "Hit@20": 0.7032096706961234,
+        "MRR": 0.4477579740335643,
+        "n": 2399
+      },
+      "latency_ms": {
+        "search_p50": null,
+        "rerank_p50": null,
+        "e2e_p95": null
+      },
+      "groups": {
+        "복합 질문 파생": {
+          "n": 901,
+          "Hit@5": 0.4816870144284129,
+          "MRR": 0.35657153881291576
+        },
+        "단일 주제 파생": {
+          "n": 1498,
+          "Hit@5": 0.6081441922563418,
+          "MRR": 0.5026037538291613
+        }
+      },
+      "depts": {
+        "외과": {
+          "n": 651,
+          "Hit@5": 0.5453149001536098
+        },
+        "피부과": {
+          "n": 301,
+          "Hit@5": 0.627906976744186
+        },
+        "치과": {
+          "n": 129,
+          "Hit@5": 0.49612403100775193
+        },
+        "내과": {
+          "n": 1203,
+          "Hit@5": 0.5594347464671654
+        },
+        "안과": {
+          "n": 115,
+          "Hit@5": 0.5565217391304348
         }
       }
     }
   ],
-  "paired_bootstrap": [
+  "paired_tests": [
     {
-      "base": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "model": "Snowflake/snowflake-arctic-embed-l-v2.0",
+      "base": {
+        "run": null,
+        "arm_id": "E-6"
+      },
+      "arm_id": "E-3",
       "n": 2399,
-      "delta_mrr": -0.004769108459675719,
-      "ci95_low": -0.011616830766631121,
-      "ci95_high": 0.0022850139203790115,
-      "win": 703,
-      "lose": 687,
-      "tie": 1009,
-      "verdict": "차이 없음"
-    },
-    {
-      "base": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "model": "telepix/PIXIE-Rune-v1.0",
-      "n": 2399,
-      "delta_mrr": -0.020094073991991555,
-      "ci95_low": -0.026231875152295858,
-      "ci95_high": -0.01396534094112439,
-      "win": 640,
-      "lose": 714,
-      "tie": 1045,
+      "delta_mrr": -0.13279768047947024,
+      "ci95": [
+        -0.1469373699976808,
+        -0.1182485028316071
+      ],
+      "win": 490,
+      "lose": 1345,
+      "tie": 564,
       "verdict": "기준이 우세"
     },
     {
-      "base": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "model": "nlpai-lab/KURE-v1",
-      "n": 2399,
-      "delta_mrr": -0.06917365349842099,
-      "ci95_low": -0.07984699299709071,
-      "ci95_high": -0.058988709827648526,
-      "win": 523,
-      "lose": 1139,
-      "tie": 737,
-      "verdict": "기준이 우세"
-    },
-    {
-      "base": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "model": "BAAI/bge-m3",
+      "base": {
+        "run": null,
+        "arm_id": "E-6"
+      },
+      "arm_id": "E-2",
       "n": 2399,
       "delta_mrr": -0.07305324514883485,
-      "ci95_low": -0.08429834990695399,
-      "ci95_high": -0.061860909297052694,
+      "ci95": [
+        -0.08424992320521478,
+        -0.061553284103178334
+      ],
       "win": 601,
       "lose": 1087,
       "tie": 711,
       "verdict": "기준이 우세"
     },
     {
-      "base": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
-      "model": "Alibaba-NLP/gte-multilingual-base",
+      "base": {
+        "run": null,
+        "arm_id": "E-6"
+      },
+      "arm_id": "E-1",
       "n": 2399,
-      "delta_mrr": -0.13279768047947024,
-      "ci95_low": -0.1469252067346407,
-      "ci95_high": -0.11835775581294333,
-      "win": 490,
-      "lose": 1345,
-      "tie": 564,
+      "delta_mrr": -0.06917365349842099,
+      "ci95": [
+        -0.0798757654144695,
+        -0.05898445304232981
+      ],
+      "win": 523,
+      "lose": 1139,
+      "tie": 737,
+      "verdict": "기준이 우세"
+    },
+    {
+      "base": {
+        "run": null,
+        "arm_id": "E-6"
+      },
+      "arm_id": "E-7",
+      "n": 2399,
+      "delta_mrr": -0.004769108459675719,
+      "ci95": [
+        -0.011616830766631121,
+        0.0022850139203790115
+      ],
+      "win": 703,
+      "lose": 687,
+      "tie": 1009,
+      "verdict": "차이 없음"
+    },
+    {
+      "base": {
+        "run": null,
+        "arm_id": "E-6"
+      },
+      "arm_id": "E-5",
+      "n": 2399,
+      "delta_mrr": -0.020094073991991555,
+      "ci95": [
+        -0.025841159912636302,
+        -0.014217410491392737
+      ],
+      "win": 640,
+      "lose": 714,
+      "tie": 1045,
       "verdict": "기준이 우세"
     }
   ]

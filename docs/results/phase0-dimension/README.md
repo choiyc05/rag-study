@@ -29,8 +29,8 @@ arctic 계열은 **MRL(Matryoshka)** 로 학습돼 벡터 앞부분만 써도 �
 | 차원 | ΔMRR | 95% 구간 | 상대 손실 | 판정 |
 |---:|---:|---:|---:|---|
 | 768 | −0.0030 | [−0.0059, **−0.0000**] | −0.6% | **경계선** — 상한이 0에 붙어 있다 |
-| 512 | −0.0085 | [−0.0127, −0.0041] | −1.8% | 유의하게 낮음 |
-| 256 | −0.0178 | [−0.0227, −0.0130] | −3.8% | 유의하게 낮음 |
+| 512 | −0.0085 | [−0.0127, −0.0042] | −1.8% | 유의하게 낮음 |
+| 256 | −0.0178 | [−0.0226, −0.0130] | −3.8% | 유의하게 낮음 |
 
 ## 읽는 법
 
@@ -75,3 +75,18 @@ backend/.venv/Scripts/python.exe scripts/04_evaluate.py \
 |---|---|
 | `metrics.json` | 차원별 지표 · 하위 그룹 · 짝지은 검정 |
 | `ranks.csv` | 질의별 순위 (열 = 차원) |
+
+---
+
+## 재현
+
+```bash
+backend/.venv/Scripts/python.exe scripts/04_evaluate.py \
+  --model snowflake_snowflake --truncate-dim 1024,768,512,256 \
+  --arm-id embeddings/snowflake=E-7 \
+  --phase 0-4 --measured-at 2026-08-18 --title "차원 절단(MRL) — 같은 모델, 차원만" \
+  --save docs/results/phase0-dimension
+```
+
+`--truncate-dim`에 쉼표로 여러 값을 주면 **한 번의 실행이 arm 4개**를 만들고
+arm_id에 `@1024d`가 자동으로 붙는다. 재임베딩은 없다 — 같은 벡터를 자르고 재정규화할 뿐.

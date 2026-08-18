@@ -178,6 +178,10 @@ def main() -> int:
             # 인자로 받은 이름이 아니라 **실제로 붙인 문자열**을 남긴다.
             "query_prefix": pa.array([qp] * len(buf_meta)),
             "passage_prefix": pa.array([pp] * len(buf_meta)),
+            # ⚠️ R-1(질문+답변)은 1024에서 문서의 2.2%가 **에러 없이** 잘린다.
+            # 잘린 채로 뽑은 벡터인지 나중에 구분할 방법이 없으면
+            # 그 손실이 "질문+답변 전략이 별로다"로 잘못 기록된다.
+            "max_seq_len": pa.array([args.max_seq_len] * len(buf_meta), type=pa.int32()),
         })
         pq.write_table(tbl, out_dir / f"shard_{next_idx:05d}.parquet", compression="zstd")
         next_idx += 1
