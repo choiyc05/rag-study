@@ -158,8 +158,10 @@ def main() -> int:
                 failures.append((r["id"], "빈 응답"))
             return
         orig_len = len(r["content"])
+        # 끝에 한 번에 쓰면 2,399건을 다 돌린 뒤 마지막에 죽었을 때 전부 잃는다.
+        # '이어서 돌리기'가 의미를 가지려면 완료되는 즉시 파일에 남아야 한다.
         with lock:
-            results.append({
+            row = {
                 "query": q,                    # ← 검색에 쓸 구어체 질의
                 "answer_id": r["id"],          # ← 정답 행 (원본), 정확히 1개
                 "original": r["content"],      # 검수용
@@ -176,16 +178,17 @@ def main() -> int:
                 # 단순 길이(F1 0.74)를 못 이겼다. 재현율을 우선해 둘을 OR로 묶는다 —
                 # 오탐은 분해 단계에서 걸러지지만 미탐은 영영 못 잡는다.
                 "orig_is_multi": orig_len >= 400 or len(B_Q.findall(r["content"])) >= 3,
-            })
+            }
+            results.append(row)
+            fout.write(json.dumps(row, ensure_ascii=False) + "\n")
+            fout.flush()
 
-    with ThreadPoolExecutor(max_workers=args.workers) as ex:
-        list(ex.map(work, todo))
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    with args.out.open("a", encoding="utf-8", newline="\n") as fout:
+        with ThreadPoolExecutor(max_workers=args.workers) as ex:
+            list(ex.map(work, todo))
 
     results.sort(key=lambda d: d["answer_id"])
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    with args.out.open("a", encoding="utf-8", newline="\n") as f:
-        for d in results:
-            f.write(json.dumps(d, ensure_ascii=False) + "\n")
 
     # ---------- 품질 점검 ----------
     print()
