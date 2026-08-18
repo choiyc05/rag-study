@@ -171,7 +171,7 @@ PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/01_verify_data.p
 
 | # | 작업 | 산출물 |
 |---|---|---|
-| 0-1 | zip → JSONL 전처리 (`scripts/03_prepare_data.py`) | `data/normalized/aihub_qa.jsonl` 21,606건 |
+| 0-1 | ~~zip → JSONL 전처리~~ (`scripts/03_prepare_data.py`) | ✅ `data/normalized/aihub_qa.jsonl` 21,606건 (41.2MB) |
 | 0-2 | 구어체 변형 평가셋 (`scripts/04_make_evalset.py`) | 질의 500건 + 정답 ID |
 | 0-3 | 모델 3개 임베딩 (`scripts/05_embed.py`, **RunPod**) | parquet 3개 |
 | 0-4 | numpy 브루트포스 평가 (`scripts/06_evaluate.py`) | Hit Rate@1/5/20, MRR |
@@ -187,6 +187,20 @@ PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/01_verify_data.p
 zip을 풀지 않고 그대로 읽어 21,606건을 파싱하므로 여기서 잘라 쓰면 된다.
 
 **주의:** `utf-8-sig`로 읽을 것. BOM 때문에 첫 키가 `meta`로 안 잡힌다.
+
+### 0-1 완료 (2026-08-18) — 다음 단계가 알아야 할 것
+
+- 출력 `data/normalized/aihub_qa.jsonl` — 1행 1 QA, 필드는 rag-design 스키마 + `split`
+- **`id`는 원본 JSON 파일명(UUID)이다.** 18개 zip 전체에서 고유해 그대로 썼다.
+  순번을 새로 매기면 재실행 때마다 흔들려 **평가셋이 가리키는 정답 행을 잃는다**
+- **`split` 필드가 필수다** — 지표 1은 전체를 인덱싱하고 Validation에서 질의를 만들지만,
+  지표 2는 Validation을 인덱스에서 빼고 원본 질문으로 묻는다. 이게 없으면 하나를 못 만든다
+- `content_len` / `question_marks`를 미리 재뒀다 → Phase 1-f(R-6) 대상 선별용.
+  **복합 질문(질문표현 3개+) 3,527건 = 16.3%**
+- ⚠️ **Train↔Valid 질문 누수 1건.** 0-2에서 평가셋을 만들 때 이 질문은 제외할 것 —
+  Validation 질의의 정답이 Training에도 있어 채점이 애매해진다
+- ⚠️ 발견: `department`에 앞 공백이 붙은 행 1건 → `strip()` 처리
+  ([dataset-analysis.md](dataset-analysis.md))
 
 **실행 환경 (2026-08-17 확정):** 로컬 **RTX 3050 6GB**, 오프라인 임베딩은 **RunPod**.
 막혀 있던 VRAM 항목은 해소됐다 — fp16이면 임베딩+리랭커 동시 로드가 2.2GB라 여유 있다.
