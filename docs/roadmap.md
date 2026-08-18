@@ -144,21 +144,37 @@ top-5가 실질 1건이 되는데 **에러가 안 나서 발견이 늦다.**
 
 | 파일 | 단계 |
 |---|---|
-| `01_verify_data.py` | EDA — 데이터 전반 (완료) |
-| `02_analyze_chunking.py` | EDA — 청킹 판단 (완료) |
-| `03_prepare_data.py` | Phase 0-1 |
-| `04_make_evalset.py` | Phase 0-2 |
-| `05_embed.py` | Phase 0-3 |
-| `06_evaluate.py` | Phase 0-4 |
+| `00_1_verify_data.py` | EDA — 데이터 전반 ✅ |
+| `00_2_analyze_chunking.py` | EDA — 청킹 판단 ✅ |
+| `01_prepare_data.py` | **Phase 0-1** ✅ |
+| `02_make_evalset.py` | **Phase 0-2** |
+| `03_embed.py` | **Phase 0-3** |
+| `04_evaluate.py` | **Phase 0-4** |
 
-번호는 **Phase 번호가 아니라 실행 순서**다 (EDA 2개가 Phase 0 앞에 있어 한 칸씩 밀린다).
-새 스크립트는 뒤에 이어 붙이고, 이 표를 함께 갱신한다.
+### 규칙
+
+**`{phase}{step}_이름.py`** — 접두사가 곧 Phase 번호다.
+
+| 접두사 | 대응 |
+|---|---|
+| `00_` | Phase 0 이전 (EDA) |
+| `01_` ~ `04_` | **Phase 0-1 ~ 0-4** |
+| `1a_` ~ `1f_` | Phase 1-a ~ 1-f (스크립트가 생긴다면) |
+| `20_` | Phase 2 |
+| `30_` ~ `35_` | Phase 3-0 ~ 3-5 |
+
+**한 단계에 스크립트가 여러 개면 `_1`, `_2`를 더 붙인다.**
+`00_1_verify_data.py` / `00_2_analyze_chunking.py`가 그 예다.
+
+파일명만 보고 로드맵의 어느 단계인지 바로 알 수 있게 하는 것이 목적이다.
+새 스크립트를 만들면 이 표를 함께 갱신한다.
 
 모든 스크립트는 **저장소 루트에서** 실행하며 경로는 루트 상대경로로 쓴다.
-Windows에서는 `PYTHONIOENCODING=utf-8`이 없으면 cp949로 출력하다 죽는다.
+출력 인코딩은 각 스크립트가 `sys.stdout.reconfigure`로 직접 처리한다
+(Windows 기본 cp949로는 한글 출력 중 죽는다). 환경변수를 걸 필요 없다.
 
 ```bash
-PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/01_verify_data.py
+backend/.venv/Scripts/python.exe scripts/00_1_verify_data.py
 ```
 
 ---
@@ -171,10 +187,10 @@ PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/01_verify_data.p
 
 | # | 작업 | 산출물 |
 |---|---|---|
-| 0-1 | ~~zip → JSONL 전처리~~ (`scripts/03_prepare_data.py`) | ✅ `data/normalized/aihub_qa.jsonl` 21,606건 (41.2MB) |
-| 0-2 | 구어체 변형 평가셋 (`scripts/04_make_evalset.py`) | 질의 500건 + 정답 ID |
-| 0-3 | 모델 3개 임베딩 (`scripts/05_embed.py`, **RunPod**) | parquet 3개 |
-| 0-4 | numpy 브루트포스 평가 (`scripts/06_evaluate.py`) | Hit Rate@1/5/20, MRR |
+| 0-1 | ~~zip → JSONL 전처리~~ (`scripts/01_prepare_data.py`) | ✅ `data/normalized/aihub_qa.jsonl` 21,606건 (41.2MB) |
+| 0-2 | 구어체 변형 평가셋 (`scripts/02_make_evalset.py`) | 질의 500건 + 정답 ID |
+| 0-3 | 모델 3개 임베딩 (`scripts/03_embed.py`, **RunPod**) | parquet 3개 |
+| 0-4 | numpy 브루트포스 평가 (`scripts/04_evaluate.py`) | Hit Rate@1/5/20, MRR |
 
 **완료 기준:** experiments.md에 **모델 3개의 Hit Rate·MRR 숫자가 채워지고,
 임베딩 모델과 차원이 확정된다.**
@@ -183,7 +199,7 @@ PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/01_verify_data.p
 브루트포스 유사도가 1초 미만이다. **스키마를 먼저 정하려 들지 말 것** — 차원이
 안 정해졌는데 테이블부터 만들면 세 번 다시 만들게 된다.
 
-**재사용:** 파싱 로직은 `scripts/01_verify_data.py`에 이미 검증된 것이 있다.
+**재사용:** 파싱 로직은 `scripts/00_1_verify_data.py`에 이미 검증된 것이 있다.
 zip을 풀지 않고 그대로 읽어 21,606건을 파싱하므로 여기서 잘라 쓰면 된다.
 
 **주의:** `utf-8-sig`로 읽을 것. BOM 때문에 첫 키가 `meta`로 안 잡힌다.

@@ -1,6 +1,6 @@
 """Phase 0-1 — AI Hub 라벨링데이터(QA) zip을 JSONL 한 벌로 정규화한다.
 
-    저장소 루트에서:  backend/.venv/Scripts/python.exe scripts/03_prepare_data.py
+    저장소 루트에서:  backend/.venv/Scripts/python.exe scripts/01_prepare_data.py
 
 이 스크립트가 다루는 것은 **QA 21,606건뿐이다.** 원천데이터(말뭉치) 239건은
 청킹·전처리가 필요하고 투입 여부 자체가 A/B 대상이라 Phase 3에서 별도로 다룬다
@@ -34,7 +34,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 DATA_ROOT = Path("data/59.반려견 성장 및 질병 관련 말뭉치 데이터/3.개방데이터/1.데이터")
 OUT_DEFAULT = Path("data/normalized/aihub_qa.jsonl")
 
-# 02_analyze_chunking.py와 같은 패턴을 쓴다. 여기서 세는 값으로 Phase 1-f(R-6)의
+# 00_2_analyze_chunking.py와 같은 패턴을 쓴다. 여기서 세는 값으로 Phase 1-f(R-6)의
 # 분해 대상을 고르므로, 두 스크립트가 다른 기준을 쓰면 숫자가 어긋난다.
 Q_PATTERN = re.compile(r"(요\?|까\?|나요|ㄹ까요|는지요|습니까|궁금)")
 
@@ -169,7 +169,7 @@ def main() -> int:
     print(f"    복합 질문(질문표현 3개+) {multi:,}건 ({multi / n * 100:.1f}%)  ← Phase 1-f 대상 후보")
 
     print()
-    print("  다음: scripts/04_make_evalset.py (구어체 변형 평가셋)")
+    print("  다음: scripts/02_make_evalset.py (구어체 변형 평가셋)")
     return 0
 
 

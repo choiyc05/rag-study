@@ -6,6 +6,11 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 
+# Windows 기본 코드페이지(cp949)로는 이 파일의 출력 문자를 못 찍고 죽는다.
+# 호출부에서 PYTHONIOENCODING을 걸어주지 않아도 되도록 여기서 처리한다.
+import sys
+sys.stdout.reconfigure(encoding="utf-8")
+
 ROOT = Path(
     "data/"
     "59.반려견 성장 및 질병 관련 말뭉치 데이터/3.개방데이터/1.데이터"

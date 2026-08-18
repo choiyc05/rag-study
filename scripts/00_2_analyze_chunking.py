@@ -1,10 +1,15 @@
 """청킹이 필요한지 재검증. 문자 길이가 아니라 "잘리는가 / 여러 주제인가"를 본다.
 
 docs/dataset-analysis.md "텍스트 길이" 절의 근거. 저장소 루트에서 실행:
-    PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/02_analyze_chunking.py
+    backend/.venv/Scripts/python.exe scripts/00_2_analyze_chunking.py
 """
 import json, re, zipfile
 from pathlib import Path
+
+# Windows 기본 코드페이지(cp949)로는 이 파일의 출력 문자를 못 찍고 죽는다.
+# 호출부에서 PYTHONIOENCODING을 걸어주지 않아도 되도록 여기서 처리한다.
+import sys
+sys.stdout.reconfigure(encoding="utf-8")
 
 ROOT = Path("data/59.반려견 성장 및 질병 관련 말뭉치 데이터/3.개방데이터/1.데이터")
 
