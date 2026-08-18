@@ -138,6 +138,31 @@ top-5가 실질 1건이 되는데 **에러가 안 나서 발견이 늦다.**
 
 ---
 
+## 스크립트 명명 규칙
+
+`scripts/`의 파일명은 **두 자리 숫자 접두사 = 실행 순서**다. 번호순으로 돌리면 된다.
+
+| 파일 | 단계 |
+|---|---|
+| `01_verify_data.py` | EDA — 데이터 전반 (완료) |
+| `02_analyze_chunking.py` | EDA — 청킹 판단 (완료) |
+| `03_prepare_data.py` | Phase 0-1 |
+| `04_make_evalset.py` | Phase 0-2 |
+| `05_embed.py` | Phase 0-3 |
+| `06_evaluate.py` | Phase 0-4 |
+
+번호는 **Phase 번호가 아니라 실행 순서**다 (EDA 2개가 Phase 0 앞에 있어 한 칸씩 밀린다).
+새 스크립트는 뒤에 이어 붙이고, 이 표를 함께 갱신한다.
+
+모든 스크립트는 **저장소 루트에서** 실행하며 경로는 루트 상대경로로 쓴다.
+Windows에서는 `PYTHONIOENCODING=utf-8`이 없으면 cp949로 출력하다 죽는다.
+
+```bash
+PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/01_verify_data.py
+```
+
+---
+
 ## Phase 0 — 측정 가능한 최소 파이프라인 ★ 여기부터
 
 멘토 To-Do 1번("현재 버전의 Hit Rate/MRR 먼저 측정")에 해당.
@@ -146,10 +171,10 @@ top-5가 실질 1건이 되는데 **에러가 안 나서 발견이 늦다.**
 
 | # | 작업 | 산출물 |
 |---|---|---|
-| 0-1 | zip → JSONL 전처리 (`scripts/prepare_data.py`) | `data/normalized/aihub_qa.jsonl` 21,606건 |
-| 0-2 | 구어체 변형 평가셋 (`scripts/make_evalset.py`) | 질의 500건 + 정답 ID |
-| 0-3 | 모델 3개 임베딩 (`scripts/embed.py`, **RunPod**) | parquet 3개 |
-| 0-4 | numpy 브루트포스 평가 (`scripts/evaluate.py`) | Hit Rate@1/5/20, MRR |
+| 0-1 | zip → JSONL 전처리 (`scripts/03_prepare_data.py`) | `data/normalized/aihub_qa.jsonl` 21,606건 |
+| 0-2 | 구어체 변형 평가셋 (`scripts/04_make_evalset.py`) | 질의 500건 + 정답 ID |
+| 0-3 | 모델 3개 임베딩 (`scripts/05_embed.py`, **RunPod**) | parquet 3개 |
+| 0-4 | numpy 브루트포스 평가 (`scripts/06_evaluate.py`) | Hit Rate@1/5/20, MRR |
 
 **완료 기준:** experiments.md에 **모델 3개의 Hit Rate·MRR 숫자가 채워지고,
 임베딩 모델과 차원이 확정된다.**
@@ -158,9 +183,8 @@ top-5가 실질 1건이 되는데 **에러가 안 나서 발견이 늦다.**
 브루트포스 유사도가 1초 미만이다. **스키마를 먼저 정하려 들지 말 것** — 차원이
 안 정해졌는데 테이블부터 만들면 세 번 다시 만들게 된다.
 
-**재사용:** 파싱 로직은 `scripts/verify_data.py`에 이미 검증된 것이 있다.
-zip을 풀지 않고 그대로 읽어 21,606건을 파싱한다. ⚠️ `ROOT` 경로가 `C:/Users/403/...`로
-하드코딩돼 있으므로 인자/환경변수로 빼는 것부터.
+**재사용:** 파싱 로직은 `scripts/01_verify_data.py`에 이미 검증된 것이 있다.
+zip을 풀지 않고 그대로 읽어 21,606건을 파싱하므로 여기서 잘라 쓰면 된다.
 
 **주의:** `utf-8-sig`로 읽을 것. BOM 때문에 첫 키가 `meta`로 안 잡힌다.
 
@@ -217,7 +241,6 @@ Phase 0의 숫자를 기준선으로 두고 **한 번에 하나씩** 켜서 재�
 | `compose.yaml` | **`shm_size: 1gb`** — 없으면 `CREATE INDEX`가 `No space left on device`로 죽는다. 디스크가 아니라 컨테이너 공유메모리라 메시지가 원인을 안 가리킨다 |
 | `pyproject.toml` | `transformers<5` 고정 (5.x에서 리랭커가 `prepare_for_model` 없음으로 죽음) |
 | `repositories/` | 지금 `SourceItem`(스키마)을 반환 중 → `SearchResult(document, score)` dataclass 반환, service가 스키마로 변환 |
-| `scripts/verify_data.py` | 하드코딩된 Windows 절대경로 제거 |
 
 **완료 기준:** `POST /chat`이 실제 검색 결과 기반으로 답한다. 프론트 연결은 그다음.
 

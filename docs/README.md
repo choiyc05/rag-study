@@ -116,7 +116,7 @@ RAG 본작업과는 별개로, 메인 프로젝트에 그대로 옮길 골격을
 
 하기로 정했으나 아직 손 안 댄 것들. **[roadmap.md](roadmap.md) Phase 2에서 함께 처리**한다
 (`compose.yaml` `shm_size`, `models/document.py` 재작성, repository 반환 타입,
-`transformers<5` 고정, `verify_data.py` 하드코딩 경로).
+`transformers<5` 고정).
 
 ### 참고 — 직전 시도의 실측 기록
 

@@ -1,7 +1,7 @@
 """청킹이 필요한지 재검증. 문자 길이가 아니라 "잘리는가 / 여러 주제인가"를 본다.
 
 docs/dataset-analysis.md "텍스트 길이" 절의 근거. 저장소 루트에서 실행:
-    PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/analyze_chunking.py
+    PYTHONIOENCODING=utf-8 backend/.venv/Scripts/python.exe scripts/02_analyze_chunking.py
 """
 import json, re, zipfile
 from pathlib import Path

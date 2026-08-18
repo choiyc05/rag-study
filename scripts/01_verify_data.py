@@ -7,7 +7,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(
-    "C:/Users/403/Documents/workspace/rag-study/data/"
+    "data/"
     "59.반려견 성장 및 질병 관련 말뭉치 데이터/3.개방데이터/1.데이터"
 )
 
