@@ -38,6 +38,10 @@ ENV_PATH = Path("backend/.env")
 FORMAL = re.compile(r"(문의드립니다|여쭤보고자|궁금합니다|알고 싶습니다|말씀드립니다"
                     r"|관찰되는데|하고자 합니다|드리고자|바랍니다)")
 
+# 복합 질문 선별용. 00_2_analyze_chunking.py의 B_Q와 같은 패턴을 쓴다.
+B_Q = re.compile(r"(\?+|[가-힣]+(?:요|까|나요|까요|지요|습니까|합니까|가요)"
+                 r"|어떻게|무엇|언제|어디|얼마나|원인|이유)")
+
 PROMPT = """너는 잘 정제된 문어체 질문을, 실제 보호자가 챗봇 입력창에 칠 법한 짧은 구어체로 바꾼다.
 
 규칙:
@@ -167,11 +171,11 @@ def main() -> int:
                 # Phase 1-f(R-6) 가설을 이 평가셋으로 바로 검증할 수 있게 표시해둔다.
                 # 복합 질문에서 파생된 질의만 따로 Hit Rate를 내면 분해의 효과가 보인다.
                 #
-                # 기준이 '질문표현 3개+'만이 아닌 이유: 시험 생성에서 질문표현이 2개인데도
-                # 이갈이(치과)와 은행잎 섭취(중독)가 섞인 580자짜리 행이 나왔다. 정규식은
-                # 종결어미를 셀 뿐 주제 수를 못 센다. 길이를 보조 신호로 함께 쓴다.
-                "orig_is_multi": r["question_marks"] >= 3
-                                 or (r["question_marks"] == 2 and orig_len >= 500),
+                # 기준은 LLM 정답 40건과 대조해 고른 것이다(dataset-analysis.md).
+                # 종결어미 세기는 재현율 0.30으로 나빴고, 정교한 정규식(F1 0.73)도
+                # 단순 길이(F1 0.74)를 못 이겼다. 재현율을 우선해 둘을 OR로 묶는다 —
+                # 오탐은 분해 단계에서 걸러지지만 미탐은 영영 못 잡는다.
+                "orig_is_multi": orig_len >= 400 or len(B_Q.findall(r["content"])) >= 3,
             })
 
     with ThreadPoolExecutor(max_workers=args.workers) as ex:
