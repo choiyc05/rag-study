@@ -9,3 +9,27 @@ dependencies = [
     "google-genai>=2.17.0",
     "pydantic-settings>=2.15.0",
 ]
+
+# --- Phase 0-3/0-4 · 임베딩 실험용 ---------------------------------------
+# 앱 런타임(fastapi/genai)과 섞지 않으려고 그룹으로 뺐다. 기본 `uv sync`로는
+# 안 깔리고 `uv sync --group ml`을 해야 들어온다.
+#   - torch는 Windows에서 PyPI 기본 휠이 CPU 전용이다. cu126 인덱스를 명시하지
+#     않으면 **에러 없이 CPU로 돌아가서** 21,606건이 몇 시간씩 걸린다.
+#   - transformers<5 고정: 5.x에서 리랭커가 prepare_for_model 없음으로 죽는다
+#     (docs/roadmap.md Phase 2 "계류 중인 수정").
+[dependency-groups]
+ml = [
+    "torch>=2.6",
+    "sentence-transformers>=3.4",
+    "transformers<5",
+    "pyarrow>=18",
+    "numpy>=2",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126", marker = "sys_platform == 'win32'" }]

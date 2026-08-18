@@ -20,7 +20,7 @@ import sys
 import time
 from pathlib import Path
 
-sys.stdout.reconfigure(encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 
 DOCS_DEFAULT = Path("data/normalized/aihub_qa.jsonl")
 EVAL_DEFAULT = Path("data/normalized/evalset_colloquial.jsonl")
@@ -57,15 +57,32 @@ def main() -> int:
     ap.add_argument("--docs", type=Path, default=DOCS_DEFAULT)
     ap.add_argument("--eval", type=Path, default=EVAL_DEFAULT)
     ap.add_argument("--out-root", type=Path, default=OUT_ROOT)
-    ap.add_argument("--batch-size", type=int, default=8,
-                    help="직전 시도 실측: 100은 패딩 낭비로 8보다 오히려 느렸다")
+    # 길이 정렬 + 토큰 예산 배치. "배치 100이 8보다 느렸다"는 직전 시도 기록은
+    # **길이 정렬을 안 했을 때** 얘기다. 정렬하면 한 배치의 문장 길이가 고르게
+    # 모여 패딩 낭비가 사라지므로 큰 배치가 유리해진다(docs/rag-design.md).
+    # 배치 크기를 고정하지 않고 `글자예산 / 배치최장길이`로 잡는 이유는 6GB에서
+    # 긴 문장 배치만 OOM이 나기 때문이다. 짧으면 크게, 길면 작게 자동으로 잡힌다.
+    ap.add_argument("--batch-size", type=int, default=32, help="배치 상한(건수)")
+    ap.add_argument("--char-budget", type=int, default=8000,
+                    help="배치 하나의 (건수 x 최장 글자수) 상한. 낮추면 VRAM을 덜 쓴다")
     ap.add_argument("--shard-size", type=int, default=2000, help="이 건수마다 parquet 조각으로 flush")
-    ap.add_argument("--max-seq-len", type=int, default=1024)
-    ap.add_argument("--fp16", action="store_true", default=True)
-    # ⚠️ prefix는 모델 카드를 보고 명시적으로 넘긴다. E5 계열은 query:/passage:가
-    # 필수인데 빠뜨려도 **에러가 안 나고** 성능만 떨어져서 "이 모델 별로네"라고
-    # 오판하게 된다. 후보 3종(bge-m3/KURE-v1/gte)은 prefix가 없는 것으로 알려져
-    # 있으나, 반드시 모델 카드로 확인하고 여기에 적을 것.
+    ap.add_argument("--max-seq-len", type=int, default=1024,
+                    help="실측 p99=628토큰, 1024 초과 0.03% — 사실상 무손실")
+    ap.add_argument("--limit", type=int, default=0, help="앞 N건만 (연기 테스트용)")
+    ap.add_argument("--fp16", action=argparse.BooleanOptionalAction, default=True,
+                    help="--no-fp16으로 끌 수 있다")
+    # ⚠️ prefix는 이 스크립트가 가장 조용히 틀리는 지점이다. 빠뜨려도 **에러가
+    # 안 나고** 성능만 떨어져서 "이 모델 별로네"라고 오판하게 된다.
+    #
+    # 그래서 리터럴을 손으로 적는 대신 **모델이 자기 config에 등록해둔 이름**을
+    # 쓰는 걸 기본으로 한다(`--query-prompt-name query`). 리터럴을 추측하지 않게
+    # 되고, 등록돼 있지 않으면 **조용히 무시되는 대신 즉시 죽는다.**
+    #   arctic-ko / PIXIE-Rune : {"query": "query: "}  → --query-prompt-name query
+    #   bge-m3 / KURE-v1 / gte : prompts 없음          → 아무것도 넘기지 않는다
+    ap.add_argument("--query-prompt-name", default=None,
+                    help="모델 config에 등록된 프롬프트 이름 (예: query)")
+    ap.add_argument("--passage-prompt-name", default=None)
+    # 등록돼 있지 않은 모델에 리터럴을 직접 넣어야 할 때만 쓴다.
     ap.add_argument("--query-prefix", default="")
     ap.add_argument("--passage-prefix", default="")
     ap.add_argument("--device", default=None)
@@ -88,6 +105,12 @@ def main() -> int:
         t = pq.read_table(sh, columns=["kind", "id"])
         done |= set(zip(t.column("kind").to_pylist(), t.column("id").to_pylist()))
     todo = [it for it in items if (it[0], it[1]) not in done]
+    if args.limit:
+        todo = todo[:args.limit]
+    # 긴 것부터. 내림차순이면 **가장 무거운 배치가 맨 처음**에 오므로 OOM이
+    # 90% 지점이 아니라 시작 직후에 드러난다. 순서는 결과에 영향이 없다 —
+    # 재개는 (kind,id) 집합으로 하고, 문장별 임베딩은 배치 구성과 무관하다.
+    todo.sort(key=lambda it: -len(it[2]))
     print(f"모델 {args.model}")
     print(f"  대상 {len(items):,}건 (완료 {len(done):,} / 남음 {len(todo):,})  조각 {len(shards)}개")
     if not todo:
@@ -108,6 +131,32 @@ def main() -> int:
     if args.fp16 and device == "cuda":
         model = model.half()
 
+    # 등록된 프롬프트를 해석한다. 이름을 줬는데 실제로는 안 붙는 상황에서
+    # **여기서 죽인다** — 그냥 넘어가면 prefix 없이 임베딩된 걸 모른 채
+    # "이 모델 성능이 낮네"로 끝난다.
+    #
+    # ⚠️ `model.prompts`를 존재 여부로 검사하면 안 된다. sentence-transformers 5.x는
+    #    모델이 아무것도 등록하지 않아도 {'query': '', 'document': ''}를 채워 넣는다.
+    #    (실측: bge-m3 → {'query': '', 'document': ''}). 이름은 항상 있고 값만 비어
+    #    있으므로, **값이 비면 실패로 본다.**
+    registered = getattr(model, "prompts", None) or {}
+    def resolve(name, literal, what):
+        if name is None:
+            return literal
+        if not registered.get(name):
+            print(f"[!] {args.model}: '{name}' 프롬프트가 비어 있다"
+                  f" (등록분 {registered!r}).", file=sys.stderr)
+            print("    이름을 넘겼는데 실제로 붙는 문자열이 없다 ="
+                  " prefix 없이 임베딩된다.", file=sys.stderr)
+            print(f"    모델 카드를 확인하고 --{what}-prompt-name을 고치거나,"
+                  " prefix가 없는 모델이면 이 옵션을 빼고 돌릴 것.", file=sys.stderr)
+            raise SystemExit(2)
+        return registered[name]
+    qp = resolve(args.query_prompt_name, args.query_prefix, "query")
+    pp = resolve(args.passage_prompt_name, args.passage_prefix, "passage")
+    print(f"  prompt  query={qp!r}  passage={pp!r}"
+          f"  (모델 등록분: {sorted(registered) or '없음'})")
+
     import pyarrow as pa
 
     next_idx = len(shards)
@@ -126,29 +175,51 @@ def main() -> int:
             # 04_evaluate.py가 이 값들을 대조해서 다르면 멈춘다.
             "model_name": pa.array([args.model] * len(buf_meta)),
             "dim": pa.array([len(buf_vec[0])] * len(buf_meta), type=pa.int32()),
-            "query_prefix": pa.array([args.query_prefix] * len(buf_meta)),
-            "passage_prefix": pa.array([args.passage_prefix] * len(buf_meta)),
+            # 인자로 받은 이름이 아니라 **실제로 붙인 문자열**을 남긴다.
+            "query_prefix": pa.array([qp] * len(buf_meta)),
+            "passage_prefix": pa.array([pp] * len(buf_meta)),
         })
         pq.write_table(tbl, out_dir / f"shard_{next_idx:05d}.parquet", compression="zstd")
         next_idx += 1
         buf_meta, buf_vec = [], []
 
-    for i in range(0, len(todo), args.batch_size):
-        chunk = todo[i:i + args.batch_size]
-        texts = [(args.query_prefix if k == "query" else args.passage_prefix) + t
-                 for k, _, t in chunk]
-        vecs = model.encode(texts, batch_size=len(chunk),
-                            normalize_embeddings=True,   # 코사인 = 내적이 되게
-                            show_progress_bar=False)
-        buf_meta += [(k, i_) for k, i_, _ in chunk]
-        buf_vec += [v.astype("float32").tolist() for v in vecs]
+    def batches(rows):
+        """길이 내림차순으로 정렬된 rows를 (건수 x 최장길이) 예산으로 묶는다."""
+        cur = []
+        for r in rows:
+            longest = max(len(r[2]), len(cur[0][2]) if cur else 0)
+            if cur and ((len(cur) + 1) * longest > args.char_budget
+                        or len(cur) >= args.batch_size):
+                yield cur
+                cur = []
+            cur.append(r)
+        if cur:
+            yield cur
 
-        if len(buf_meta) >= args.shard_size:
-            flush()
-            n = i + len(chunk)
+    # kind별로 나눠 돌린다. 문서와 질의는 prompt가 다르므로 한 배치에 섞으면
+    # 안 된다. 길이 정렬은 각 그룹 안에서 그대로 유지된다.
+    done_n, last_report = 0, 0.0
+    for kind, prefix in (("doc", pp), ("query", qp)):
+        rows = [it for it in todo if it[0] == kind]
+        if not rows:
+            continue
+        for chunk in batches(rows):
+            vecs = model.encode([prefix + t for _, _, t in chunk],
+                                batch_size=len(chunk),
+                                normalize_embeddings=True,   # 코사인 = 내적이 되게
+                                show_progress_bar=False)
+            buf_meta += [(k, i_) for k, i_, _ in chunk]
+            buf_vec += [v.astype("float32").tolist() for v in vecs]
+            done_n += len(chunk)
+
+            if len(buf_meta) >= args.shard_size:
+                flush()
             el = time.time() - t0
-            print(f"  {n:,}/{len(todo):,}  {el:.0f}s  "
-                  f"({n/max(el,1):.0f}건/s, 남은 시간 ~{(len(todo)-n)/max(n/max(el,1),1e-9)/60:.0f}분)")
+            if el - last_report >= 20:                   # flush 주기와 분리
+                last_report = el
+                rate = done_n / max(el, 1e-9)
+                print(f"  {done_n:,}/{len(todo):,}  {el:.0f}s  "
+                      f"({rate:.0f}건/s, 남은 시간 ~{(len(todo)-done_n)/max(rate,1e-9)/60:.0f}분)")
     flush()
 
     dim = None
@@ -156,8 +227,7 @@ def main() -> int:
         dim = pq.read_table(sh, columns=["dim"]).column("dim")[0].as_py()
         break
     print(f"\n완료 {time.time()-t0:.0f}s · 차원 {dim} · 출력 {out_dir}/")
-    print(f"  ★ experiments.md에 차원 {dim}과 prefix"
-          f"({args.query_prefix!r}/{args.passage_prefix!r})를 기록할 것")
+    print(f"  ★ experiments.md에 차원 {dim}과 prefix({qp!r}/{pp!r})를 기록할 것")
     print("  다음: scripts/04_evaluate.py")
     return 0
 

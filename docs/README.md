@@ -11,12 +11,55 @@
 | **[experiments.md](experiments.md)** | **실험 기록. 이 프로젝트의 결과물** |
 | [data-expansion.md](data-expansion.md) | 데이터 확장 전략 (수집 · 편입 방식) |
 | [mentor-feedback.md](mentor-feedback.md) | 멘토 피드백 원문 기록 + 반영 현황 |
+| **[results/](results/)** | **측정 결과 원자료.** 스크립트가 직접 떨군 `metrics.json` · `ranks.csv` |
 
-## 현재 상태 (2026-08-17 기준)
+## 현재 상태 (2026-08-18 기준)
 
-- 코드는 **2026-08-13 이후 변경 없음.** 마지막 커밋 `4e810d0`은 문서 3개 수정
-- 멘토 피드백 반영해 **실행 계획 수립 완료** → [roadmap.md](roadmap.md)
-- **RAG 구현은 아직 0%.** 다음 착수 지점은 roadmap의 **Phase 0**
+**Phase 0 완료 — 이 프로젝트의 첫 숫자가 나왔다.**
+
+| 단계 | 상태 |
+|---|---|
+| 0-1 전처리 | ✅ QA 21,606건 → `data/normalized/aihub_qa.jsonl` |
+| 0-2 평가셋 | ✅ 구어체 변형 질의 2,399건 |
+| 0-3 임베딩 | ✅ 모델 3종 (로컬 RTX 3050, 각 3~5분) |
+| 0-4 채점 | ✅ [results/phase0-embedding/](results/phase0-embedding/) |
+
+- **차원 1024 확정** — DB 스키마가 `vector(1024)`로 정해졌다
+- **모델은 3종을 Phase 1까지 병행한다** (최종 1종은 Phase 2 진입 시 결정)
+
+  | 약칭 | 모델 | B-0 MRR |
+  |---|---|---:|
+  | A | `Snowflake/snowflake-arctic-embed-l-v2.0` (주 후보, 다국어) | 0.463 |
+  | K | `dragonkue/…-l-v2.0-ko` (한국어 파인튜닝) | 0.468 |
+  | B | `BAAI/bge-m3` (다른 계열 대조) | 0.395 |
+
+- 후보 6종 비교 — 1차 3종 + 리더보드 재조사로 고른 2차 3종
+- ⚠️ **"한국어 파인튜닝이 유리하다"가 두 계열에서 모두 깨졌다**
+  (bge-m3→KURE-v1, arctic→arctic-ko 둘 다 짝지은 검정에서 동률)
+- ⚠️ **prefix를 빠뜨리면 MRR −16%** — 최고 모델이 최하위로 보인다
+- 다음 착수 지점은 roadmap의 **Phase 1**
+
+### `data/` 에 뭐가 있나
+
+**전부 `.gitignore` 대상이다** — 저장소에 없고 로컬에서 만들어진다.
+
+| 경로 | 크기 | 내용 | 재생성 |
+|---|---:|---|---|
+| `59.반려견 성장…/` | 28M | **AI Hub 원본 zip** | ❌ AI Hub에서 다시 받아야 함 |
+| `normalized/` | 44M | `aihub_qa.jsonl`(21,606) · `evalset_colloquial.jsonl`(2,399) | ⚠️ 평가셋은 LLM 생성이라 **다시 만들면 값이 달라진다** |
+| `embeddings/` | 260M | 모델 6종의 임베딩 (모델당 46M, 12조각) | ✅ 모델당 3~5분 |
+| `embeddings_ablation/` | 46M | **prefix 대조군** (아래) | ✅ 5분 |
+
+⚠️ **`embeddings_ablation/`이 왜 따로 있나** — `arctic-ko`를 **prefix 없이** 뽑은
+것이라 `embeddings/`의 같은 모델과 **폴더 이름이 충돌한다.** 한 폴더에 두면
+`03_embed.py`가 "이미 뽑았다"고 건너뛰거나 두 조건의 벡터가 섞인다.
+그래서 `--out-root`로 통째로 분리했다. 결과 숫자는
+[results/phase0-prefix-ablation/](results/phase0-prefix-ablation/)에 저장돼 있어
+**폴더 자체는 지워도 된다.**
+
+⚠️ **`normalized/evalset_colloquial.jsonl`은 함부로 재생성하지 말 것.**
+LLM으로 만든 것이라 다시 돌리면 문장이 달라지고, 그러면
+[experiments.md](experiments.md)의 이전 숫자와 **비교할 수 없게 된다.**
 
 ### 2026-08-17 — 멘토 피드백 반영
 
